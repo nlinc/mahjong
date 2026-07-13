@@ -1,7 +1,7 @@
 {
   "name": "American Mahjong PWA",
   "short_name": "Mahjong PWA",
-  "description": "A premium, mobile-first American Mahjong game under NMJL rules.",
+  "description": "A mobile-first American Mahjong practice game with solo and family play.",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0f1319",

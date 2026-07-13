@@ -1,8 +1,9 @@
 /* Unit Tests for Mahjong PWA validation engine */
-import { 
+import {
     createWall, sortHandBySuit, sortHandByValue, 
     checkMahjong, SUITS 
 } from './js/engine.js';
+import { readFileSync } from 'node:fs';
 
 console.log("-------------------------------------------------");
 console.log("🀄 running American Mahjong Engine Unit Tests...");
@@ -111,6 +112,46 @@ try {
 
 } catch (e) {
     assert(false, `Singles & Pairs tests failed: ${e.message}`);
+}
+
+// 4. Exposed-hand validation
+try {
+    const complete = [
+        { id: 1, suit: SUITS.FLOWERS, val: 'F' }, { id: 2, suit: SUITS.FLOWERS, val: 'F' },
+        ...['N', 'N', 'N', 'E', 'E', 'E', 'W', 'W', 'W', 'S', 'S', 'S'].map((val, index) => ({ id: index + 3, suit: SUITS.WINDS, val }))
+    ];
+    const northExposure = [complete.slice(2, 5)];
+    const concealed = [...complete.slice(0, 2), ...complete.slice(5)];
+    assert(checkMahjong(concealed, northExposure).matched, 'Exposed tiles should count toward a valid exposable Mahjong hand');
+
+    const concealedPattern = [
+        { id: 20, suit: SUITS.FLOWERS, val: 'F' }, { id: 21, suit: SUITS.FLOWERS, val: 'F' },
+        ...[1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6].map((val, index) => ({ id: index + 22, suit: SUITS.DOTS, val }))
+    ];
+    assert(!checkMahjong(concealedPattern.slice(2), [concealedPattern.slice(0, 2)]).matched, 'A concealed card hand must fail when any tiles are exposed');
+} catch (e) {
+    assert(false, `Exposure validation failed: ${e.message}`);
+}
+
+// 5. DOM contract checks catch missing registry entries before runtime.
+try {
+    const html = readFileSync(new URL('./index.html', import.meta.url), 'utf8');
+    const ui = readFileSync(new URL('./js/ui.js', import.meta.url), 'utf8');
+    const app = readFileSync(new URL('./js/app.js', import.meta.url), 'utf8');
+    const htmlIds = [...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
+    const duplicateIds = htmlIds.filter((id, index) => htmlIds.indexOf(id) !== index);
+    assert(duplicateIds.length === 0, `HTML IDs must be unique${duplicateIds.length ? `: ${duplicateIds.join(', ')}` : ''}`);
+
+    const registryEntries = [...ui.matchAll(/\b([A-Za-z][A-Za-z0-9]+): document\.getElementById\('([^']+)'\)/g)];
+    const registryNames = new Set(registryEntries.map(match => match[1]));
+    const missingHtmlIds = registryEntries.map(match => match[2]).filter(id => !htmlIds.includes(id));
+    assert(missingHtmlIds.length === 0, `Every UI registry ID must exist in HTML${missingHtmlIds.length ? `: ${missingHtmlIds.join(', ')}` : ''}`);
+
+    const usedElementNames = new Set([...app.matchAll(/elements\.([A-Za-z][A-Za-z0-9]+)/g)].map(match => match[1]));
+    const missingRegistryNames = [...usedElementNames].filter(name => !registryNames.has(name));
+    assert(missingRegistryNames.length === 0, `Every app element reference must be registered${missingRegistryNames.length ? `: ${missingRegistryNames.join(', ')}` : ''}`);
+} catch (e) {
+    assert(false, `DOM contract checks failed: ${e.message}`);
 }
 
 console.log("-------------------------------------------------");

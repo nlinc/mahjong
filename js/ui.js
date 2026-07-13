@@ -1,4 +1,4 @@
-import { SUITS, HANDS_CARD, CARD_CATEGORIES, analyzeHandStrengths } from './engine.js';
+import { SUITS, HANDS_CARD, CARD_CATEGORIES, analyzeHandStrengths } from './engine.js?v=6';
 
 // DOM selectors
 export const elements = {
@@ -19,13 +19,18 @@ export const elements = {
     btnViewGuideGame: document.getElementById('btn-view-guide-game'),
     btnOpenGuideLobby: document.getElementById('btn-open-guide-lobby'),
     btnMenu: document.getElementById('btn-menu'),
+    btnSortSuit: document.getElementById('btn-sort-suit'),
+    btnSortValue: document.getElementById('btn-sort-value'),
+    btnRackDiscard: document.getElementById('btn-rack-discard'),
+    btnDeclareMahjong: document.getElementById('btn-declare-mahjong'),
     btnRestartGame: document.getElementById('btn-restart-game'),
     btnLeaveGame: document.getElementById('btn-leave-game'),
-    btnCloseMenu: document.getElementById('btnCloseMenu'),
+    btnCloseMenu: document.getElementById('btn-close-menu'),
     
     // Game Inputs
     inputRoomId: document.getElementById('input-room-id'),
     chkFillBots: document.getElementById('chk-fill-bots'),
+    multiplayerPanels: document.getElementById('multiplayer-panels'),
     
     // Labels & Lists
     lobbyRoomCode: document.getElementById('lobby-room-code'),
@@ -91,6 +96,13 @@ export function getTileChar(suit, val) {
     return TILE_UNICODE[suit][val] || '🀄';
 }
 
+function getTileLabel(suit, val) {
+    const suitNames = { dots: 'Dot', bams: 'Bam', crakes: 'Crak', winds: 'Wind', dragons: 'Dragon' };
+    if (suit === SUITS.FLOWERS) return 'Flower';
+    if (suit === SUITS.JOKERS) return 'Joker';
+    return `${val} ${suitNames[suit] || suit}`;
+}
+
 // Show active screen
 export function switchScreen(targetScreen) {
     document.querySelectorAll('.screen').forEach(s => {
@@ -126,7 +138,8 @@ export function renderPlayerRack(hand, selectedId, onTileSelect, onTileDblClick)
     elements.playerTileRack.innerHTML = '';
     
     hand.forEach(tile => {
-        const tileEl = document.createElement('div');
+        const tileEl = document.createElement('button');
+        tileEl.type = 'button';
         tileEl.className = 'tile';
         if (tile.id === selectedId) {
             tileEl.classList.add('selected');
@@ -134,6 +147,8 @@ export function renderPlayerRack(hand, selectedId, onTileSelect, onTileDblClick)
         tileEl.setAttribute('data-id', tile.id);
         tileEl.setAttribute('data-suit', tile.suit);
         tileEl.setAttribute('data-val', tile.val);
+        tileEl.setAttribute('aria-label', getTileLabel(tile.suit, tile.val));
+        tileEl.setAttribute('aria-pressed', String(tile.id === selectedId));
         tileEl.textContent = getTileChar(tile.suit, tile.val);
         
         tileEl.addEventListener('click', () => {
@@ -291,22 +306,28 @@ export function renderCharlestonStep(step, selectedTiles, onTileRemove, onConfir
         "Courtesy Pass 🤝"
     ];
     
+    const directionNames = ['right', 'across', 'left', 'left', 'across', 'right'];
     elements.charStepTitle.textContent = stepNames[step] || "Charleston Passing";
+    elements.charInstructions.textContent = `Select 3 tiles from your rack to pass ${directionNames[step] || 'across'}.`;
     elements.charSelectCount.textContent = selectedTiles.length;
     
     elements.charSelectedTilesContainer.innerHTML = '';
     
     for (let i = 0; i < 3; i++) {
-        const slotEl = document.createElement('div');
+        let slotEl;
         if (selectedTiles[i]) {
+            slotEl = document.createElement('button');
+            slotEl.type = 'button';
             slotEl.className = 'tile';
             slotEl.setAttribute('data-suit', selectedTiles[i].suit);
             slotEl.setAttribute('data-val', selectedTiles[i].val);
+            slotEl.setAttribute('aria-label', `Remove ${getTileLabel(selectedTiles[i].suit, selectedTiles[i].val)} from pass`);
             slotEl.textContent = getTileChar(selectedTiles[i].suit, selectedTiles[i].val);
             slotEl.addEventListener('click', () => {
                 onTileRemove(selectedTiles[i].id);
             });
         } else {
+            slotEl = document.createElement('div');
             slotEl.className = 'tile-placeholder';
             slotEl.textContent = 'Select';
         }
@@ -423,10 +444,8 @@ export function setupMenuOverlay(onRestart, onLeave) {
     
     elements.btnMenu.onclick = () => toggleOverlay(elements.menuOverlay, true);
     
-    // Ensure button with ID btn-close-menu works, wait, the HTML says id="btn-close-menu", but JS has elements.btnCloseMenu
-    const closeBtn = document.getElementById('btn-close-menu');
-    if (closeBtn) {
-        closeBtn.onclick = () => toggleOverlay(elements.menuOverlay, false);
+    if (elements.btnCloseMenu) {
+        elements.btnCloseMenu.onclick = () => toggleOverlay(elements.menuOverlay, false);
     }
 }
 export function setupGuideOverlay() {

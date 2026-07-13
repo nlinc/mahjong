@@ -127,7 +127,7 @@ export function sortHandByValue(hand) {
     });
 }
 
-// 2026 NMJL Hand Card Definition Templates
+// Compact practice hand-card definition templates. Annual cards can be supplied separately.
 // Group Size Map:
 // single = 1, pair = 2, pung = 3, kong = 4, quint = 5, sextet = 6
 export const CARD_CATEGORIES = {
@@ -619,14 +619,18 @@ export function analyzeHandStrengths(hand) {
 
 // Check if hand declared Mahjong matches ANY card hand
 // Returns { matched: boolean, handInfo: Object | null }
-export function checkMahjong(hand) {
-    if (hand.length !== 14) {
+export function checkMahjong(hand, exposures = []) {
+    const exposedTiles = exposures.flat();
+    const completeHand = [...hand, ...exposedTiles];
+
+    if (completeHand.length !== 14) {
         return { matched: false, reason: "Must have exactly 14 tiles." };
     }
 
     for (const cat in HANDS_CARD) {
         for (const item of HANDS_CARD[cat]) {
-            if (checkGroupMatch(item.groups, hand)) {
+            if (exposedTiles.length > 0 && item.isConcealed) continue;
+            if (checkGroupMatch(item.groups, completeHand)) {
                 return { matched: true, handInfo: item };
             }
         }
@@ -638,12 +642,12 @@ export function checkMahjong(hand) {
 // NMJL rules: A discarded tile can be called to complete a Pung, Kong, Quint, or Sextet.
 // You CANNOT call a discard to complete a single or pair (except for declaring Mahjong).
 // Returns list of valid calls: ['pung', 'kong', 'quint', 'mahjong']
-export function checkDiscardClaims(playerHand, discardTile) {
+export function checkDiscardClaims(playerHand, discardTile, exposures = []) {
     const claims = [];
     const simulatedHand = [...playerHand, discardTile];
 
     // Check if discard completes Mahjong
-    if (checkMahjong(simulatedHand).matched) {
+    if (checkMahjong(simulatedHand, exposures).matched) {
         claims.push('mahjong');
     }
 

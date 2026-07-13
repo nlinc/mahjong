@@ -2,10 +2,36 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /rooms/{roomId} {
-      // Allow read, create, and update for anonymous lobby sync
-      allow read, create, update: if true;
-      // Do not allow deleting rooms from client side
-      allow delete: if false;
+      function validRoom(data) {
+        return data.keys().hasOnly(['roomId', 'status', 'players', 'gameState'])
+          && data.roomId == roomId
+          && roomId.size() == 5
+          && data.status in ['lobby', 'charleston', 'playing', 'ended']
+          && data.players is list
+          && data.players.size() >= 1
+          && data.players.size() <= 4
+          && data.gameState is map
+          && data.gameState.keys().hasOnly([
+            'wall', 'hands', 'exposures', 'discards', 'currentTurn',
+            'activeDiscard', 'claimPrompt', 'claimWindow', 'charlestonStep',
+            'charlestonPasses', 'selectedTileId', 'gamePhase', 'winnerMessage',
+            'lastActionTime'
+          ])
+          && data.gameState.discards is list
+          && data.gameState.discards.size() <= 152
+          && data.gameState.currentTurn is int
+          && data.gameState.currentTurn >= 0
+          && data.gameState.currentTurn <= 3;
+      }
+
+      // Short room codes are intentionally readable for link-based family play.
+      // Writes are restricted to the exact room schema and immutable room ID.
+      allow read: if true;
+      allow create: if validRoom(request.resource.data);
+      allow update: if validRoom(request.resource.data)
+        && request.resource.data.roomId == resource.data.roomId;
+      // Rooms are ephemeral and are removed when their last human participant leaves.
+      allow delete: if resource.data.roomId == roomId;
     }
   }
 }

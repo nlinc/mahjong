@@ -9,8 +9,31 @@
     "public": ".",
     "ignore": [
       "firebase.json",
+      "firestore.rules",
+      "firestore.indexes.json",
+      "check.mjs",
+      ".git/**",
+      ".firebase/**",
+      ".firebaserc",
+      ".gitignore",
       "**/.*",
       "**/node_modules/**"
+    ],
+    "headers": [
+      {
+        "source": "**/*.{html,js,css,json}",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-cache" },
+          { "key": "X-Content-Type-Options", "value": "nosniff" },
+          { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+        ]
+      },
+      {
+        "source": "**/*.{png,ico}",
+        "headers": [
+          { "key": "Cache-Control", "value": "public,max-age=604800,immutable" }
+        ]
+      }
     ],
     "rewrites": [
       {

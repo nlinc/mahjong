@@ -1,14 +1,16 @@
-const CACHE_NAME = 'mahjong-pwa-v3';
+const CACHE_NAME = 'mahjong-pwa-v6';
 const ASSETS = [
   './',
   './index.html',
-  './style.css',
+  './style.css?v=6',
   './manifest.json',
-  './js/engine.js',
-  './js/bot.js',
-  './js/ui.js',
-  './js/firebase.js',
-  './js/app.js'
+  './icon-192.png',
+  './icon-512.png',
+  './js/engine.js?v=6',
+  './js/bot.js?v=6',
+  './js/ui.js?v=6',
+  './js/firebase.js?v=6',
+  './js/app.js?v=6'
 ];
 
 self.addEventListener('install', (event) => {
@@ -34,6 +36,7 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
   // Network-First strategy to prevent stale caches during active development
   event.respondWith(
     fetch(event.request)
@@ -48,9 +51,12 @@ self.addEventListener('fetch', (event) => {
         return response;
       })
       .catch(() => {
-        // Fall back to cache when offline
+        // Navigations fall back to the app shell; assets only fall back to an
+        // exact cached response so a failed script never receives HTML.
         return caches.match(event.request).then((cachedResponse) => {
-          return cachedResponse || caches.match('./index.html');
+          if (cachedResponse) return cachedResponse;
+          if (event.request.mode === 'navigate') return caches.match('./index.html');
+          return Response.error();
         });
       })
   );

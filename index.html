@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>American Mahjong PWA</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=6">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -22,7 +22,7 @@
                 <div class="logo-area">
                     <span class="tile-icon">🀄</span>
                     <h1>Mahjong PWA</h1>
-                    <p class="subtitle">American NMJL Ruleset</p>
+                    <p class="subtitle">American Mahjong Practice</p>
                 </div>
 
                 <div class="mode-select">
@@ -104,7 +104,7 @@
                     <h2 class="room-indicator" id="lbl-room-id-display">Local Game</h2>
                 </div>
                 <div class="header-right">
-                    <button id="btn-view-card" class="btn btn-sm btn-outline btn-card-view">🎴 NMJL Card</button>
+                    <button id="btn-view-card" class="btn btn-sm btn-outline btn-card-view">🎴 Practice Card</button>
                     <button id="btn-view-guide-game" class="btn btn-sm btn-outline">❓ Guide</button>
                     <button id="btn-menu" class="btn btn-sm btn-outline">⚙️ Menu</button>
                 </div>
@@ -267,7 +267,7 @@
         <div id="card-overlay" class="overlay hidden">
             <div class="card-viewer-modal glass">
                 <div class="modal-header">
-                    <h2>2026 NMJL Hand Card Reference</h2>
+                    <h2>Practice Hand Card Reference</h2>
                     <button id="btn-close-card" class="btn-close">✕</button>
                 </div>
                 <div class="modal-tabs">
@@ -296,7 +296,7 @@
                 </div>
                 <div class="guide-content">
                     <h3>The Absolute Basics</h3>
-                    <p>American Mahjong is played with 4 players and 152 tiles. The goal is to be the first to build a hand of 14 tiles that matches one of the exact hands on the official <strong>NMJL Card</strong>.</p>
+                    <p>American Mahjong is played with 4 players and 152 tiles. The goal is to be the first to build a hand of 14 tiles that matches one of the exact hands on the selected annual card. This app currently includes a compact practice card for learning and play-testing.</p>
                     
                     <h3>Tile Composition</h3>
                     <ul>
@@ -344,6 +344,6 @@
     </div>
 
     <!-- Scripts -->
-    <script type="module" src="js/app.js"></script>
+    <script type="module" src="js/app.js?v=6"></script>
 </body>
 </html>
