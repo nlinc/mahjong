@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mahjong-pwa-v1';
+const CACHE_NAME = 'mahjong-pwa-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -34,12 +34,24 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Network-First strategy to prevent stale caches during active development
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      return cachedResponse || fetch(event.request);
-    }).catch(() => {
-      // Fallback if network fails and asset is not in cache
-      return caches.match('./index.html');
-    })
+    fetch(event.request)
+      .then((response) => {
+        // Cache the updated version if it is a successful GET request from same origin
+        if (response.status === 200 && event.request.method === 'GET' && event.request.url.startsWith(self.location.origin)) {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone);
+          });
+        }
+        return response;
+      })
+      .catch(() => {
+        // Fall back to cache when offline
+        return caches.match(event.request).then((cachedResponse) => {
+          return cachedResponse || caches.match('./index.html');
+        });
+      })
   );
 });

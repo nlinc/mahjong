@@ -369,6 +369,10 @@ export function initCardReference() {
 
 export function renderCoPilotSuggestions(hand) {
     if (!hand || hand.length === 0) return;
+    if (!elements.coPilotSuggestions) {
+        console.warn("Co-pilot suggestions container not found in DOM.");
+        return;
+    }
     
     // Analyze hand strengths
     latestHandStrengths = analyzeHandStrengths(hand);

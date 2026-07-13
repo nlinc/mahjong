@@ -114,14 +114,16 @@ function setupUIEvents() {
         updateRackUI();
     });
 
-    // Co-pilot toggle button listener
-    elements.btnToggleCopilot.addEventListener('click', () => {
-        const isHidden = elements.coPilotPanel.classList.toggle('hidden');
-        if (!isHidden) {
-            updateCoPilot();
-        }
-        elements.btnToggleCopilot.classList.toggle('active', !isHidden);
-    });
+    // Co-pilot toggle button listener (with safety checks for PWA caching)
+    if (elements.btnToggleCopilot && elements.coPilotPanel) {
+        elements.btnToggleCopilot.addEventListener('click', () => {
+            const isHidden = elements.coPilotPanel.classList.toggle('hidden');
+            if (!isHidden) {
+                updateCoPilot();
+            }
+            elements.btnToggleCopilot.classList.toggle('active', !isHidden);
+        });
+    }
 
     // Discard selected button
     elements.btnRackDiscard.addEventListener('click', handleManualDiscard);
@@ -147,6 +149,7 @@ function startNewGame() {
     appState.charlestonStep = 0;
     appState.discards = [];
     appState.exposures = [[], [], [], []];
+    appState.selectedTileId = null;
     
     elements.lblRoomIdDisplay.textContent = appState.mode === 'solo' ? 'Local Game' : `Room: ${appState.roomId}`;
     
@@ -207,8 +210,12 @@ function updateRackUI() {
 }
 
 function updateCoPilot() {
-    if (appState.hands[0]) {
-        renderCoPilotSuggestions(appState.hands[0]);
+    if (appState.hands[0] && typeof renderCoPilotSuggestions === 'function') {
+        try {
+            renderCoPilotSuggestions(appState.hands[0]);
+        } catch (e) {
+            console.warn("Failed to render co-pilot suggestions:", e);
+        }
     }
 }
 
