@@ -1,0 +1,11 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /rooms/{roomId} {
+      // Allow read, create, and update for anonymous lobby sync
+      allow read, create, update: if true;
+      // Do not allow deleting rooms from client side
+      allow delete: if false;
+    }
+  }
+}

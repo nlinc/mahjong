@@ -4,11 +4,33 @@
 let db = null;
 let useFirebase = false;
 
-// Attempt to load Firebase config from localStorage if saved by user, or fallback to LocalStorage sync
+// Default config for the project
+const defaultFirebaseConfig = {
+    projectId: "mahjong-lincoln",
+    appId: "1:626242943126:web:db95ad98a48ed4c0e36ab7",
+    storageBucket: "mahjong-lincoln.firebasestorage.app",
+    apiKey: "AIzaSyCWULCN7sxPverHGK9gvmRuqB88f7dYhC8",
+    authDomain: "mahjong-lincoln.firebaseapp.com",
+    messagingSenderId: "626242943126",
+    projectNumber: "626242943126"
+};
+
+// Attempt to load Firebase config from localStorage if saved by user, or fallback to default config
 const savedConfig = localStorage.getItem('mahjong_firebase_config');
+let config = null;
 if (savedConfig) {
     try {
-        const config = JSON.parse(savedConfig);
+        config = JSON.parse(savedConfig);
+    } catch (e) {
+        console.warn("Failed to parse saved Firebase config:", e);
+    }
+}
+if (!config) {
+    config = defaultFirebaseConfig;
+}
+
+if (config) {
+    try {
         const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js");
         const { getFirestore } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js");
         
@@ -17,7 +39,7 @@ if (savedConfig) {
         useFirebase = true;
         console.log("Firebase initialized successfully for multiplayer.");
     } catch (e) {
-        console.warn("Failed to initialize Firebase with stored config, falling back to LocalStorage sync:", e);
+        console.warn("Failed to initialize Firebase, falling back to LocalStorage sync:", e);
     }
 }
 
