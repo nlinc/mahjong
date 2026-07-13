@@ -1199,3 +1199,17 @@ body, html {
     color: #10b981;
     border-color: rgba(16, 185, 129, 0.3);
 }
+
+/* Charleston Active state - pop rack in front of overlay and unblur it */
+body.charleston-active .seat-bottom {
+    z-index: 250;
+    position: relative;
+}
+
+#charleston-overlay {
+    pointer-events: none;
+}
+
+#charleston-overlay .modal-card {
+    pointer-events: auto;
+}

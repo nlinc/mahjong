@@ -141,6 +141,7 @@ function setupUIEvents() {
 /* ========================================================================= */
 
 function startNewGame() {
+    document.body.classList.remove('charleston-active');
     switchScreen(elements.gameScreen);
     appState.gamePhase = 'charleston';
     appState.charlestonStep = 0;
@@ -181,6 +182,7 @@ function restartLocalGame() {
 }
 
 function exitToMainLobby() {
+    document.body.classList.remove('charleston-active');
     if (appState.mode === 'multi') {
         handleLeaveLobby();
     } else {
@@ -259,6 +261,7 @@ function handleTileDblClick(tileId) {
 /* ========================================================================= */
 
 function startCharlestonPhase() {
+    document.body.classList.add('charleston-active');
     myCharlestonSelections = [];
     appState.charlestonStep = 0;
     
@@ -330,6 +333,7 @@ function handleConfirmCharlestonPass() {
 }
 
 function concludeCharleston() {
+    document.body.classList.remove('charleston-active');
     toggleOverlay(elements.charlestonOverlay, false);
     appState.gamePhase = 'playing';
     appState.currentTurn = 0; // Dealer (East) starts
