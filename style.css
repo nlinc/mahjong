@@ -1078,3 +1078,124 @@ body, html {
         border-radius: 6px;
     }
 }
+
+/* CO-PILOT ASSISTANT PANEL */
+.co-pilot-box {
+    width: 100%;
+    margin-bottom: 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(10px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.co-pilot-header {
+    background: rgba(255, 255, 255, 0.04);
+    padding: 6px 12px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.co-pilot-suggestions {
+    display: flex;
+    gap: 8px;
+    padding: 8px 12px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.1) transparent;
+}
+
+.co-pilot-suggestions::-webkit-scrollbar {
+    height: 4px;
+}
+.co-pilot-suggestions::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 2px;
+}
+
+.copilot-suggestion-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    padding: 6px 10px;
+    min-width: 130px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    transition: background 0.2s;
+}
+
+.copilot-suggestion-card.high-match {
+    background: rgba(16, 185, 129, 0.08);
+    border-color: rgba(16, 185, 129, 0.25);
+}
+
+.copilot-suggestion-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.copilot-suggestion-card.high-match:hover {
+    background: rgba(16, 185, 129, 0.12);
+}
+
+.copilot-pattern {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: var(--text-main);
+    letter-spacing: 0.5px;
+}
+
+.copilot-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+}
+
+.copilot-pct {
+    font-weight: 700;
+    color: var(--accent);
+}
+
+.copilot-suggestion-card.high-match .copilot-pct {
+    color: #10b981;
+}
+
+/* Card viewer percentage display */
+.hand-card-row {
+    position: relative;
+}
+
+.card-match-pct {
+    position: absolute;
+    right: 14px;
+    top: 10px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--accent);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.card-match-pct.high {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border-color: rgba(16, 185, 129, 0.3);
+}

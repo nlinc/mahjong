@@ -146,22 +146,36 @@ export const HANDS_CARD = {
             display: 'F F F F 11111 22222',
             desc: '4 Flowers, Quint of any suit number, Quint of next consecutive number in SAME suit.',
             isConcealed: false,
-            // groups: FFFF (Flower Kong), Quint (X), Quint (Y = X+1)
-            matchTest: (tiles) => matchConsecQuint(tiles)
+            groups: [
+                { size: 4, suit: SUITS.FLOWERS, val: 'F', isRelative: false },
+                { size: 5, suit: 'A', isRelative: true, relOffset: 0 },
+                { size: 5, suit: 'A', isRelative: true, relOffset: 1 }
+            ]
         },
         {
             id: 'consec_2',
             display: '11 22 333 4444 555',
             desc: 'Consecutive run in same suit. Pairs of 1st/2nd, Pung of 3rd, Kong of 4th, Pung of 5th.',
             isConcealed: false,
-            matchTest: (tiles) => matchConsecRun22344(tiles)
+            groups: [
+                { size: 2, suit: 'A', isRelative: true, relOffset: 0 },
+                { size: 2, suit: 'A', isRelative: true, relOffset: 1 },
+                { size: 3, suit: 'A', isRelative: true, relOffset: 2 },
+                { size: 4, suit: 'A', isRelative: true, relOffset: 3 },
+                { size: 3, suit: 'A', isRelative: true, relOffset: 4 }
+            ]
         },
         {
             id: 'consec_3',
             display: '111 222 3333 4444',
             desc: 'Any 3 consecutive numbers in 2 different suits (Pung Pung same suit, Kong Kong other suit).',
             isConcealed: false,
-            matchTest: (tiles) => matchConsecRun3344(tiles)
+            groups: [
+                { size: 3, suit: 'A', isRelative: true, relOffset: 0 },
+                { size: 3, suit: 'A', isRelative: true, relOffset: 1 },
+                { size: 4, suit: 'B', isRelative: true, relOffset: 2 },
+                { size: 4, suit: 'B', isRelative: true, relOffset: 3 }
+            ]
         }
     ],
     [CARD_CATEGORIES.NUM_2468]: [
@@ -170,21 +184,38 @@ export const HANDS_CARD = {
             display: 'F F 22 44 6666 8888',
             desc: 'Pair Flowers, Pairs of 2 and 4, Kongs of 6 and 8 in same suit.',
             isConcealed: false,
-            matchTest: (tiles) => match2468AllSame(tiles)
+            groups: [
+                { size: 2, suit: SUITS.FLOWERS, val: 'F', isRelative: false },
+                { size: 2, suit: 'A', val: 2, isRelative: false },
+                { size: 2, suit: 'A', val: 4, isRelative: false },
+                { size: 4, suit: 'A', val: 6, isRelative: false },
+                { size: 4, suit: 'A', val: 8, isRelative: false }
+            ]
         },
         {
             id: '2468_2',
             display: '222 444 6666 8888',
             desc: 'Even numbers in 2 different suits. Pung of 2, Pung of 4 (Suit A); Kong of 6, Kong of 8 (Suit B).',
             isConcealed: false,
-            matchTest: (tiles) => match2468TwoSuits(tiles)
+            groups: [
+                { size: 3, suit: 'A', val: 2, isRelative: false },
+                { size: 3, suit: 'A', val: 4, isRelative: false },
+                { size: 4, suit: 'B', val: 6, isRelative: false },
+                { size: 4, suit: 'B', val: 8, isRelative: false }
+            ]
         },
         {
             id: '2468_3',
-            display: 'F F F F 2222 4444 6666 8888',
-            desc: 'Flowers, and Kongs of 2, 4, 6, 8 in any combinations of suits.',
+            display: 'F F F F 2222 44 66 88',
+            desc: 'Flowers, Kong of 2, Pairs of 4, 6, 8 in same suit.',
             isConcealed: false,
-            matchTest: (tiles) => match2468WithFlowers(tiles)
+            groups: [
+                { size: 4, suit: SUITS.FLOWERS, val: 'F', isRelative: false },
+                { size: 4, suit: 'A', val: 2, isRelative: false },
+                { size: 2, suit: 'A', val: 4, isRelative: false },
+                { size: 2, suit: 'A', val: 6, isRelative: false },
+                { size: 2, suit: 'A', val: 8, isRelative: false }
+            ]
         }
     ],
     [CARD_CATEGORIES.LIKE]: [
@@ -193,7 +224,12 @@ export const HANDS_CARD = {
             display: 'F F F F 1111 1111 11',
             desc: 'Flowers, and Kongs of same number in 2 different suits, Pair of same number in 3rd suit.',
             isConcealed: false,
-            matchTest: (tiles) => matchLikeNumbers(tiles)
+            groups: [
+                { size: 4, suit: SUITS.FLOWERS, val: 'F', isRelative: false },
+                { size: 4, suit: 'A', isRelative: true, relOffset: 0 },
+                { size: 4, suit: 'B', isRelative: true, relOffset: 0 },
+                { size: 2, suit: 'C', isRelative: true, relOffset: 0 }
+            ]
         }
     ],
     [CARD_CATEGORIES.WINDS_DRAGONS]: [
@@ -202,30 +238,52 @@ export const HANDS_CARD = {
             display: 'F F NNN EEE WWW SSS',
             desc: 'Pair Flowers, and Pungs of North, East, West, South. Exposeable.',
             isConcealed: false,
-            matchTest: (tiles) => matchFourWindKongs(tiles)
+            groups: [
+                { size: 2, suit: SUITS.FLOWERS, val: 'F', isRelative: false },
+                { size: 3, suit: SUITS.WINDS, val: 'N', isRelative: false },
+                { size: 3, suit: SUITS.WINDS, val: 'E', isRelative: false },
+                { size: 3, suit: SUITS.WINDS, val: 'W', isRelative: false },
+                { size: 3, suit: SUITS.WINDS, val: 'S', isRelative: false }
+            ]
         },
         {
             id: 'winds_2',
             display: 'EEE WWW DD DD 111 111',
             desc: 'Pung East, Pung West, pair of matching Dragons, two matching Pungs of numbers.',
             isConcealed: false,
-            matchTest: (tiles) => matchWindsDragonsMixed(tiles)
+            groups: [
+                { size: 3, suit: SUITS.WINDS, val: 'E', isRelative: false },
+                { size: 3, suit: SUITS.WINDS, val: 'W', isRelative: false },
+                { size: 2, suit: SUITS.DRAGONS, val: 'R', isRelative: false },
+                { size: 3, suit: 'A', isRelative: true, relOffset: 0 },
+                { size: 3, suit: 'B', isRelative: true, relOffset: 0 }
+            ]
         }
     ],
     [CARD_CATEGORIES.NUM_369]: [
         {
             id: '369_1',
-            display: 'F F F F 3333 6666 9999',
-            desc: 'Flowers, and Kongs of 3, 6, 9 in same suit.',
+            display: 'F F F F 3333 6666 99',
+            desc: 'Flowers, Kongs of 3, 6, and Pair of 9 in same suit.',
             isConcealed: false,
-            matchTest: (tiles) => match369SameSuit(tiles)
+            groups: [
+                { size: 4, suit: SUITS.FLOWERS, val: 'F', isRelative: false },
+                { size: 4, suit: 'A', val: 3, isRelative: false },
+                { size: 4, suit: 'A', val: 6, isRelative: false },
+                { size: 2, suit: 'A', val: 9, isRelative: false }
+            ]
         },
         {
             id: '369_2',
             display: '333 666 9999 9999',
             desc: '3, 6, 9 in 2 different suits. Pung of 3, Pung of 6 (Suit A); two Kongs of 9 (Suit B & C).',
             isConcealed: false,
-            matchTest: (tiles) => match369MixedSuits(tiles)
+            groups: [
+                { size: 3, suit: 'A', val: 3, isRelative: false },
+                { size: 3, suit: 'A', val: 6, isRelative: false },
+                { size: 4, suit: 'B', val: 9, isRelative: false },
+                { size: 4, suit: 'C', val: 9, isRelative: false }
+            ]
         }
     ],
     [CARD_CATEGORIES.SINGLES_PAIRS]: [
@@ -234,14 +292,30 @@ export const HANDS_CARD = {
             display: 'F F 11 22 33 44 55 66',
             desc: 'Flowers, and 6 pairs of consecutive numbers in same suit. Concealed.',
             isConcealed: true,
-            matchTest: (tiles) => matchSinglesPairsConsec(tiles)
+            groups: [
+                { size: 2, suit: SUITS.FLOWERS, val: 'F', isRelative: false },
+                { size: 2, suit: 'A', isRelative: true, relOffset: 0 },
+                { size: 2, suit: 'A', isRelative: true, relOffset: 1 },
+                { size: 2, suit: 'A', isRelative: true, relOffset: 2 },
+                { size: 2, suit: 'A', isRelative: true, relOffset: 3 },
+                { size: 2, suit: 'A', isRelative: true, relOffset: 4 },
+                { size: 2, suit: 'A', isRelative: true, relOffset: 5 }
+            ]
         },
         {
             id: 'singles_2',
             display: 'EE SS WW NN DD DD 11',
             desc: 'Pairs of East, South, West, North, pair of matching Dragon, pair of matching number. Concealed.',
             isConcealed: true,
-            matchTest: (tiles) => matchSinglesPairsMixed(tiles)
+            groups: [
+                { size: 2, suit: SUITS.WINDS, val: 'E', isRelative: false },
+                { size: 2, suit: SUITS.WINDS, val: 'S', isRelative: false },
+                { size: 2, suit: SUITS.WINDS, val: 'W', isRelative: false },
+                { size: 2, suit: SUITS.WINDS, val: 'N', isRelative: false },
+                { size: 2, suit: SUITS.DRAGONS, val: 'G', isRelative: false },
+                { size: 2, suit: SUITS.DRAGONS, val: 'R', isRelative: false },
+                { size: 2, suit: 'A', isRelative: true, relOffset: 0 }
+            ]
         }
     ]
 };
@@ -410,190 +484,138 @@ function getActualTileKey(group, baseVal, suitMap) {
 }
 
 
-/* CARD TEMPLATE MATCHERS IMPLEMENTED VIA GROUP MATCHES */
-
-// 1. Consec 1: FFFF 11111 22222 (4 Flowers, Quint of X, Quint of X+1)
-function matchConsecQuint(tiles) {
-    const groups = [
-        { size: 4, suit: SUITS.FLOWERS, val: 'F', isRelative: false },
-        { size: 5, suit: 'A', isRelative: true, relOffset: 0 },
-        { size: 5, suit: 'A', isRelative: true, relOffset: 1 }
-    ];
-    return checkGroupMatch(groups, tiles);
-}
-
-// 2. Consec 2: 11 22 333 4444 555 (Pair X, Pair X+1, Pung X+2, Kong X+3, Pung X+4)
-function matchConsecRun22344(tiles) {
-    const groups = [
-        { size: 2, suit: 'A', isRelative: true, relOffset: 0 },
-        { size: 2, suit: 'A', isRelative: true, relOffset: 1 },
-        { size: 3, suit: 'A', isRelative: true, relOffset: 2 },
-        { size: 4, suit: 'A', isRelative: true, relOffset: 3 },
-        { size: 3, suit: 'A', isRelative: true, relOffset: 4 }
-    ];
-    return checkGroupMatch(groups, tiles);
-}
-
-// 3. Consec 3: 111 222 3333 4444 (Pung X, Pung X+1 in Suit A, Kong X+2, Kong X+3 in Suit B)
-function matchConsecRun3344(tiles) {
-    // 3 consecutive numbers in 2 different suits
-    // Or it could be 4 consecutive: X, X+1 (Suit A) and X+2, X+3 (Suit B)
-    // Let's implement X, X+1 (Suit A) and X+2, X+3 (Suit B)
-    const groups = [
-        { size: 3, suit: 'A', isRelative: true, relOffset: 0 },
-        { size: 3, suit: 'A', isRelative: true, relOffset: 1 },
-        { size: 4, suit: 'B', isRelative: true, relOffset: 2 },
-        { size: 4, suit: 'B', isRelative: true, relOffset: 3 }
-    ];
-    return checkGroupMatch(groups, tiles);
-}
-
-// 4. 2468 1: 2222 4444 6666 8888 (Four Kongs of 2, 4, 6, 8 same suit. Total 16 tiles? Wait, hand is 14 tiles!)
-// Ah! How does 2468 work in a 14-tile hand?
-// Typically: Pair of 2, Pair of 4, Kong of 6, Kong of 8 (2+2+4+4 = 12? No, 2+2+4+6 = 14 tiles)
-// NMJL 2468 card usually has:
-// - Pung 2, Pung 4, Pung 6, Pung 8, Pair of Flowers = 3+3+3+3+2 = 14 tiles.
-// - Or: Pair 2, Pair 4, Kong 6, Kong 8, Pair Flowers = 2+2+4+4+2 = 14.
-// Let's implement: Pair 2, Pair 4, Kong 6, Kong 8, Pair Flowers (in same suit A)
-function match2468AllSame(tiles) {
-    const groups = [
-        { size: 2, suit: SUITS.FLOWERS, val: 'F', isRelative: false },
-        { size: 2, suit: 'A', val: 2, isRelative: false },
-        { size: 2, suit: 'A', val: 4, isRelative: false },
-        { size: 4, suit: 'A', val: 6, isRelative: false },
-        { size: 4, suit: 'A', val: 8, isRelative: false }
-    ];
-    return checkGroupMatch(groups, tiles);
-}
-
-// 5. 2468 2: 222 444 6666 8888 (Pung 2, Pung 4 (Suit A), Kong 6, Kong 8 (Suit B) = 3+3+4+4 = 14 tiles)
-function match2468TwoSuits(tiles) {
-    const groups = [
-        { size: 3, suit: 'A', val: 2, isRelative: false },
-        { size: 3, suit: 'A', val: 4, isRelative: false },
-        { size: 4, suit: 'B', val: 6, isRelative: false },
-        { size: 4, suit: 'B', val: 8, isRelative: false }
-    ];
-    return checkGroupMatch(groups, tiles);
-}
-
-// 6. 2468 3: FFFF 2222 44 66 88 (Flower Kong, Kong 2, Pair 4, Pair 6, Pair 8 = 4+4+2+2+2 = 14 tiles)
-function match2468WithFlowers(tiles) {
-    const groups = [
-        { size: 4, suit: SUITS.FLOWERS, val: 'F', isRelative: false },
-        { size: 4, suit: 'A', val: 2, isRelative: false },
-        { size: 2, suit: 'A', val: 4, isRelative: false },
-        { size: 2, suit: 'A', val: 6, isRelative: false },
-        { size: 2, suit: 'A', val: 8, isRelative: false }
-    ];
-    return checkGroupMatch(groups, tiles);
-}
-
-// 7. Like Numbers: FFFF 1111 1111 11 (Flower Kong, Kong X in Suit A, Kong X in Suit B, Pair X in Suit C = 4+4+4+2 = 14)
-function matchLikeNumbers(tiles) {
-    // X is any suit number 1-9
-    const mappings = [];
-    for (let val = 1; val <= 9; val++) {
-        const groups = [
-            { size: 4, suit: SUITS.FLOWERS, val: 'F', isRelative: false },
-            { size: 4, suit: 'A', val, isRelative: false },
-            { size: 4, suit: 'B', val, isRelative: false },
-            { size: 2, suit: 'C', val, isRelative: false }
-        ];
-        if (checkGroupMatch(groups, tiles)) return true;
+// Generalized Hand Matching Scoring (returns matchCount out of 14)
+export function getHandScore(groups, tiles) {
+    const { freq, jokers } = getTileFrequencies(tiles);
+    const numericSuits = [SUITS.DOTS, SUITS.BAMS, SUITS.CRAKES];
+    
+    let needsRelVal = false;
+    for (const g of groups) {
+        if (g.isRelative) {
+            needsRelVal = true;
+            break;
+        }
     }
-    return false;
-}
 
-// 8. Winds 1: NNNN EEEE WWWW SSSS (Four wind Kongs - wait, that is 16 tiles!
-// In NMJL: Winds hands are usually:
-// - Pung North, Pung East, Pung West, Pung South, Pair of Flowers = 3+3+3+3+2 = 14.
-// - Or Kong of North, Kong of East, Kong of West, Pair of South, single of something?
-// Let's implement: Pung N, Pung E, Pung W, Pung S, Pair of Flowers.
-function matchFourWindKongs(tiles) {
-    const groups = [
-        { size: 2, suit: SUITS.FLOWERS, val: 'F', isRelative: false },
-        { size: 3, suit: SUITS.WINDS, val: 'N', isRelative: false },
-        { size: 3, suit: SUITS.WINDS, val: 'E', isRelative: false },
-        { size: 3, suit: SUITS.WINDS, val: 'W', isRelative: false },
-        { size: 3, suit: SUITS.WINDS, val: 'S', isRelative: false }
-    ];
-    return checkGroupMatch(groups, tiles);
-}
+    const baseValOptions = needsRelVal ? [1, 2, 3, 4, 5, 6, 7, 8, 9] : [0];
+    const suitVars = [...new Set(groups.map(g => g.suit).filter(s => s === 'A' || s === 'B' || s === 'C'))];
 
-// 9. Winds 2: EEE WWW DD DD 111 111 (Pung E, Pung W, Pair Dragon, Pair Dragon? No, total 14:
-// Let's check typical: Pung E, Pung W, Pair Red Dragon (matching crakes), Pung 1 (Suit A), Pung 1 (Suit B)
-// e.g. EEE WWW RR 111 111 (where R is Red Dragon matching Crakes, and numbers are 1s or any number).
-// Let's simplify: Pung E, Pung W, Pair of matching Dragon, Pung of X, Pung of X.
-function matchWindsDragonsMixed(tiles) {
-    // Any matching number val 1-9
-    for (let val = 1; val <= 9; val++) {
-        const groups = [
-            { size: 3, suit: SUITS.WINDS, val: 'E', isRelative: false },
-            { size: 3, suit: SUITS.WINDS, val: 'W', isRelative: false },
-            { size: 2, suit: SUITS.DRAGONS, val: 'R', isRelative: false },
-            { size: 3, suit: 'A', val, isRelative: false },
-            { size: 3, suit: 'B', val, isRelative: false }
-        ];
-        if (checkGroupMatch(groups, tiles)) return true;
+    function getSuitMappings() {
+        if (suitVars.length === 0) return [{}];
+        const mappings = [];
+        if (suitVars.length === 1) {
+            for (const s of numericSuits) {
+                mappings.push({ [suitVars[0]]: s });
+            }
+        } else if (suitVars.length === 2) {
+            for (const s1 of numericSuits) {
+                for (const s2 of numericSuits) {
+                    if (s1 !== s2) {
+                        mappings.push({ [suitVars[0]]: s1, [suitVars[1]]: s2 });
+                    }
+                }
+            }
+        } else if (suitVars.length === 3) {
+            for (const s1 of numericSuits) {
+                for (const s2 of numericSuits) {
+                    for (const s3 of numericSuits) {
+                        if (s1 !== s2 && s1 !== s3 && s2 !== s3) {
+                            mappings.push({ [suitVars[0]]: s1, [suitVars[1]]: s2, [suitVars[2]]: s3 });
+                        }
+                    }
+                }
+            }
+        }
+        return mappings;
     }
-    return false;
-}
 
-// 10. 369 1: FFFF 3333 6666 99 (Flower Kong, Kong 3, Kong 6, Pair 9 same suit = 4+4+4+2 = 14)
-function match369SameSuit(tiles) {
-    const groups = [
-        { size: 4, suit: SUITS.FLOWERS, val: 'F', isRelative: false },
-        { size: 4, suit: 'A', val: 3, isRelative: false },
-        { size: 4, suit: 'A', val: 6, isRelative: false },
-        { size: 2, suit: 'A', val: 9, isRelative: false }
-    ];
-    return checkGroupMatch(groups, tiles);
-}
+    const suitMappings = getSuitMappings();
+    let maxMatchCount = 0;
 
-// 11. 369 2: 333 666 9999 99 (Pung 3 (Suit A), Pung 6 (Suit A), Kong 9 (Suit B), Pair 9 (Suit C) = 3+3+4+2 = 12?
-// Wait, 14 tiles is: Pung 3 (Suit A), Pung 6 (Suit A), Kong 9 (Suit B), Kong 9 (Suit C)? No, 3+3+4+4 = 14.
-function match369MixedSuits(tiles) {
-    const groups = [
-        { size: 3, suit: 'A', val: 3, isRelative: false },
-        { size: 3, suit: 'A', val: 6, isRelative: false },
-        { size: 4, suit: 'B', val: 9, isRelative: false },
-        { size: 4, suit: 'C', val: 9, isRelative: false }
-    ];
-    return checkGroupMatch(groups, tiles);
-}
+    for (const baseVal of baseValOptions) {
+        let rangeValid = true;
+        for (const g of groups) {
+            if (g.isRelative) {
+                const val = baseVal + g.relOffset;
+                if (val < 1 || val > 9) {
+                    rangeValid = false;
+                    break;
+                }
+            }
+        }
+        if (!rangeValid) continue;
 
-// 12. Singles/Pairs 1: FF 11 22 33 44 55 66 (Pair Flowers, 6 consecutive pairs in same suit. Total 14. Concealed.)
-function matchSinglesPairsConsec(tiles) {
-    const groups = [
-        { size: 2, suit: SUITS.FLOWERS, val: 'F', isRelative: false },
-        { size: 2, suit: 'A', isRelative: true, relOffset: 0 },
-        { size: 2, suit: 'A', isRelative: true, relOffset: 1 },
-        { size: 2, suit: 'A', isRelative: true, relOffset: 2 },
-        { size: 2, suit: 'A', isRelative: true, relOffset: 3 },
-        { size: 2, suit: 'A', isRelative: true, relOffset: 4 },
-        { size: 2, suit: 'A', isRelative: true, relOffset: 5 }
-    ];
-    return checkGroupMatch(groups, tiles);
-}
-
-// 13. Singles/Pairs 2: EE SS WW NN DD DD 11 (Pair E, S, W, N, Pair Green Dragon, Pair Red Dragon, Pair X number. Total 14. Concealed.)
-function matchSinglesPairsMixed(tiles) {
-    for (let val = 1; val <= 9; val++) {
-        const groups = [
-            { size: 2, suit: SUITS.WINDS, val: 'E', isRelative: false },
-            { size: 2, suit: SUITS.WINDS, val: 'S', isRelative: false },
-            { size: 2, suit: SUITS.WINDS, val: 'W', isRelative: false },
-            { size: 2, suit: SUITS.WINDS, val: 'N', isRelative: false },
-            { size: 2, suit: SUITS.DRAGONS, val: 'G', isRelative: false },
-            { size: 2, suit: SUITS.DRAGONS, val: 'R', isRelative: false },
-            { size: 2, suit: 'A', val, isRelative: false }
-        ];
-        if (checkGroupMatch(groups, tiles)) return true;
+        for (const suitMap of suitMappings) {
+            const score = evalCombinationScore(groups, freq, jokers, baseVal, suitMap);
+            if (score > maxMatchCount) {
+                maxMatchCount = score;
+            }
+        }
     }
-    return false;
+
+    return maxMatchCount;
 }
 
+function evalCombinationScore(reqGroups, freq, availableJokers, baseVal, suitMap) {
+    const freqCopy = { ...freq };
+    let jokersLeft = availableJokers;
+    let matchCount = 0;
+
+    // First pass: Satisfy size 1 and 2 groups (no Jokers allowed)
+    for (const g of reqGroups) {
+        if (g.size <= 2) {
+            const actualTileKey = getActualTileKey(g, baseVal, suitMap);
+            const count = freqCopy[actualTileKey] || 0;
+            const naturalUsed = Math.min(count, g.size);
+            freqCopy[actualTileKey] -= naturalUsed;
+            matchCount += naturalUsed;
+        }
+    }
+
+    // Second pass: Satisfy size >= 3 groups (Jokers allowed)
+    for (const g of reqGroups) {
+        if (g.size > 2) {
+            const actualTileKey = getActualTileKey(g, baseVal, suitMap);
+            const count = freqCopy[actualTileKey] || 0;
+            const naturalUsed = Math.min(count, g.size);
+            freqCopy[actualTileKey] -= naturalUsed;
+            matchCount += naturalUsed;
+            
+            const gap = g.size - naturalUsed;
+            if (gap > 0) {
+                const jokersUsed = Math.min(jokersLeft, gap);
+                jokersLeft -= jokersUsed;
+                matchCount += jokersUsed;
+            }
+        }
+    }
+
+    return matchCount;
+}
+
+// Evaluate completion percentages for all card hands based on hand tiles
+export function analyzeHandStrengths(hand) {
+    const results = [];
+    
+    for (const cat in HANDS_CARD) {
+        for (const item of HANDS_CARD[cat]) {
+            const matchCount = getHandScore(item.groups, hand);
+            const percentage = Math.round((matchCount / 14) * 100);
+            results.push({
+                id: item.id,
+                display: item.display,
+                desc: item.desc,
+                category: cat,
+                percentage,
+                matchCount
+            });
+        }
+    }
+
+    // Sort descending by percentage
+    results.sort((a, b) => b.percentage - a.percentage);
+    return results;
+}
 
 // Check if hand declared Mahjong matches ANY card hand
 // Returns { matched: boolean, handInfo: Object | null }
@@ -604,7 +626,7 @@ export function checkMahjong(hand) {
 
     for (const cat in HANDS_CARD) {
         for (const item of HANDS_CARD[cat]) {
-            if (item.matchTest(hand)) {
+            if (checkGroupMatch(item.groups, hand)) {
                 return { matched: true, handInfo: item };
             }
         }

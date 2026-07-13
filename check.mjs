@@ -95,6 +95,20 @@ try {
     const resD = checkMahjong(handD);
     assert(resD.matched === false, `Hand D (contains Joker in pair) should FAIL validation (got: ${resD.matched})`);
 
+    // 4. Co-pilot Suggestions Strength Analyzer Test
+    const { analyzeHandStrengths } = await import("./js/engine.js");
+    const testHand = [
+        { id: 1, suit: SUITS.WINDS, val: 'E' }, { id: 2, suit: SUITS.WINDS, val: 'E' },
+        { id: 3, suit: SUITS.WINDS, val: 'S' }, { id: 4, suit: SUITS.WINDS, val: 'S' },
+        { id: 5, suit: SUITS.WINDS, val: 'W' }, { id: 6, suit: SUITS.WINDS, val: 'W' },
+        { id: 7, suit: SUITS.WINDS, val: 'N' }, { id: 8, suit: SUITS.WINDS, val: 'N' }
+    ];
+    const strengths = analyzeHandStrengths(testHand);
+    assert(strengths.length > 0, "Should generate strength recommendations");
+    assert(strengths[0].percentage > 0, `Top match should be >0% (got ${strengths[0].percentage}%)`);
+    passCount++;
+    console.log(`✅ PASS: Hand Analyzer test (top match: ${strengths[0].percentage}%)`);
+
 } catch (e) {
     assert(false, `Singles & Pairs tests failed: ${e.message}`);
 }

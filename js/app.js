@@ -10,7 +10,8 @@ import {
     elements, switchScreen, toggleOverlay, showToast, 
     renderPlayerRack, renderDiscardRiver, renderOpponentSeat, 
     renderMyExposures, renderClaimPrompt, renderCharlestonStep, 
-    setupMenuOverlay, setupGuideOverlay, setupCardOverlay, getTileChar
+    setupMenuOverlay, setupGuideOverlay, setupCardOverlay, getTileChar,
+    renderCoPilotSuggestions
 } from './ui.js';
 import { 
     createRoom, joinRoom, subscribeToRoom, updateRoom, leaveRoom, isFirebaseConnected, initFirebase 
@@ -113,6 +114,15 @@ function setupUIEvents() {
         updateRackUI();
     });
 
+    // Co-pilot toggle button listener
+    elements.btnToggleCopilot.addEventListener('click', () => {
+        const isHidden = elements.coPilotPanel.classList.toggle('hidden');
+        if (!isHidden) {
+            updateCoPilot();
+        }
+        elements.btnToggleCopilot.classList.toggle('active', !isHidden);
+    });
+
     // Discard selected button
     elements.btnRackDiscard.addEventListener('click', handleManualDiscard);
 
@@ -191,6 +201,13 @@ function updateRackUI() {
         handleTileDblClick
     );
     renderMyExposures(appState.exposures[0]);
+    updateCoPilot();
+}
+
+function updateCoPilot() {
+    if (appState.hands[0]) {
+        renderCoPilotSuggestions(appState.hands[0]);
+    }
 }
 
 function updateOpponentsUI() {

@@ -1,5 +1,4 @@
-/* UI Render Engine and Event Handler */
-import { SUITS, HANDS_CARD, CARD_CATEGORIES } from './engine.js';
+import { SUITS, HANDS_CARD, CARD_CATEGORIES, analyzeHandStrengths } from './engine.js';
 
 // DOM selectors
 export const elements = {
@@ -67,7 +66,12 @@ export const elements = {
     btnCharlestonStop: document.getElementById('btn-charleston-stop'),
     
     // Card specifics
-    cardScrollView: document.getElementById('card-scroll-view')
+    cardScrollView: document.getElementById('card-scroll-view'),
+
+    // Co-pilot
+    btnToggleCopilot: document.getElementById('btn-toggle-copilot'),
+    coPilotPanel: document.getElementById('co-pilot-panel'),
+    coPilotSuggestions: document.getElementById('co-pilot-suggestions')
 };
 
 // Map of Unicode tile representations for display
@@ -317,6 +321,8 @@ export function renderCharlestonStep(step, selectedTiles, onTileRemove, onConfir
     // We will handle option to stop in app logic
 }
 
+let latestHandStrengths = []; // Cache of the latest analysis
+
 // Setup Card Catalog viewer
 export function initCardReference() {
     const tabs = document.querySelectorAll('.card-viewer-modal .tab-btn');
@@ -334,12 +340,18 @@ export function initCardReference() {
         hands.forEach(h => {
             const row = document.createElement('div');
             row.className = 'hand-card-row';
+            
+            // Find current match percentage if available
+            const strength = latestHandStrengths.find(s => s.id === h.id);
+            const pctText = strength ? `<div class="card-match-pct${strength.percentage >= 50 ? ' high' : ''}">${strength.percentage}% Match</div>` : '';
+
             row.innerHTML = `
                 <div class="hand-pattern">${h.display}</div>
                 <div class="hand-details">
                     <span>${h.desc}</span>
                     <span class="expose-badge">${h.isConcealed ? 'C' : 'X'}</span>
                 </div>
+                ${pctText}
             `;
             elements.cardScrollView.appendChild(row);
         });
@@ -353,6 +365,47 @@ export function initCardReference() {
     
     // Default load first
     loadCategory('consec');
+}
+
+export function renderCoPilotSuggestions(hand) {
+    if (!hand || hand.length === 0) return;
+    
+    // Analyze hand strengths
+    latestHandStrengths = analyzeHandStrengths(hand);
+    
+    // Render top 3 suggestions in the Co-pilot panel
+    elements.coPilotSuggestions.innerHTML = '';
+    
+    // Display top 3
+    const top3 = latestHandStrengths.slice(0, 3);
+    top3.forEach(item => {
+        const isHigh = item.percentage >= 50;
+        const card = document.createElement('div');
+        card.className = `copilot-suggestion-card${isHigh ? ' high-match' : ''}`;
+        
+        let catText = item.category.toUpperCase().replace('_', ' ');
+        if (catText.startsWith('NUM ')) catText = catText.replace('NUM ', '');
+
+        card.innerHTML = `
+            <div class="copilot-pattern" title="${item.desc}">${item.display}</div>
+            <div class="copilot-info">
+                <span>${catText}</span>
+                <span class="copilot-pct">${item.percentage}%</span>
+            </div>
+        `;
+        
+        card.addEventListener('click', () => {
+            toggleOverlay(elements.cardOverlay, true);
+            const tabBtn = document.querySelector(`.card-viewer-modal .tab-btn[data-category="${item.category}"]`);
+            if (tabBtn) {
+                tabBtn.click();
+                // Ensure the category tab is scrolled into view in horizontal list
+                tabBtn.scrollIntoView({ behavior: 'smooth', inline: 'center' });
+            }
+        });
+        
+        elements.coPilotSuggestions.appendChild(card);
+    });
 }
 export function setupMenuOverlay(onRestart, onLeave) {
     elements.btnRestartGame.onclick = () => {

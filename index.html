@@ -186,6 +186,16 @@
                     <!-- Meld area for our exposure -->
                     <div class="my-exposures-row" id="my-exposures-row"></div>
 
+                    <!-- Co-pilot Panel -->
+                    <div id="co-pilot-panel" class="co-pilot-box glass-dark hidden">
+                        <div class="co-pilot-header">
+                            <span>💡 Mahjong Co-pilot Suggestions</span>
+                        </div>
+                        <div class="co-pilot-suggestions" id="co-pilot-suggestions">
+                            <!-- Suggestions injected dynamically -->
+                        </div>
+                    </div>
+
                     <!-- Tile Rack -->
                     <div class="rack-wood-shelf">
                         <div class="tile-rack-slots" id="player-tile-rack">
@@ -198,6 +208,7 @@
                         <div class="controls-left">
                             <button id="btn-sort-suit" class="btn btn-sm btn-outline">🔀 Sort Suit</button>
                             <button id="btn-sort-value" class="btn btn-sm btn-outline">🔢 Sort Value</button>
+                            <button id="btn-toggle-copilot" class="btn btn-sm btn-outline btn-accent">💡 Co-pilot</button>
                         </div>
                         <div class="controls-center">
                             <span class="turn-prompt-text" id="turn-instruction">Waiting for dealing to complete...</span>
