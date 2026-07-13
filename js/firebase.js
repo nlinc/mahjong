@@ -15,52 +15,54 @@ const defaultFirebaseConfig = {
     projectNumber: "626242943126"
 };
 
-// Attempt to load Firebase config from localStorage if saved by user, or fallback to default config
-const savedConfig = localStorage.getItem('mahjong_firebase_config');
-let config = null;
-if (savedConfig) {
-    try {
-        config = JSON.parse(savedConfig);
-    } catch (e) {
-        console.warn("Failed to parse saved Firebase config:", e);
-    }
-}
-if (!config) {
-    config = defaultFirebaseConfig;
-}
-
-if (config) {
-    try {
-        const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js");
-        const { getFirestore } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js");
-        
-        const app = initializeApp(config);
-        db = getFirestore(app);
-        useFirebase = true;
-        console.log("Firebase initialized successfully for multiplayer.");
-    } catch (e) {
-        console.warn("Failed to initialize Firebase, falling back to LocalStorage sync:", e);
-    }
-}
-
 // Subscriptions storage
 const listeners = {};
 
 // LocalStorage Room state listener to mock multiplayer across tabs
-if (!useFirebase) {
-    window.addEventListener('storage', (event) => {
-        if (event.key && event.key.startsWith('mahjong_room_')) {
-            const roomId = event.key.replace('mahjong_room_', '');
-            if (listeners[roomId]) {
-                try {
-                    const data = JSON.parse(event.newValue);
-                    if (data) listeners[roomId](data);
-                } catch (e) {
-                    console.error("Failed to parse local room state:", e);
-                }
+window.addEventListener('storage', (event) => {
+    if (!useFirebase && event.key && event.key.startsWith('mahjong_room_')) {
+        const roomId = event.key.replace('mahjong_room_', '');
+        if (listeners[roomId]) {
+            try {
+                const data = JSON.parse(event.newValue);
+                if (data) listeners[roomId](data);
+            } catch (e) {
+                console.error("Failed to parse local room state:", e);
             }
         }
-    });
+    }
+});
+
+export async function initFirebase() {
+    if (db) return;
+    
+    // Attempt to load Firebase config from localStorage if saved by user, or fallback to default config
+    const savedConfig = localStorage.getItem('mahjong_firebase_config');
+    let config = null;
+    if (savedConfig) {
+        try {
+            config = JSON.parse(savedConfig);
+        } catch (e) {
+            console.warn("Failed to parse saved Firebase config:", e);
+        }
+    }
+    if (!config) {
+        config = defaultFirebaseConfig;
+    }
+
+    if (config) {
+        try {
+            const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js");
+            const { getFirestore } = await import("https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js");
+            
+            const app = initializeApp(config);
+            db = getFirestore(app);
+            useFirebase = true;
+            console.log("Firebase initialized successfully for multiplayer.");
+        } catch (e) {
+            console.warn("Failed to initialize Firebase, falling back to LocalStorage sync:", e);
+        }
+    }
 }
 
 export function isFirebaseConnected() {

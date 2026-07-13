@@ -13,7 +13,7 @@ import {
     setupMenuOverlay, setupGuideOverlay, setupCardOverlay, getTileChar
 } from './ui.js';
 import { 
-    createRoom, joinRoom, subscribeToRoom, updateRoom, leaveRoom, isFirebaseConnected 
+    createRoom, joinRoom, subscribeToRoom, updateRoom, leaveRoom, isFirebaseConnected, initFirebase 
 } from './firebase.js';
 
 // Local Game State
@@ -44,12 +44,13 @@ let appState = {
 // Selected tiles for Charleston pass (local player)
 let myCharlestonSelections = [];
 
-// Initialize game settings and bindings
-document.addEventListener('DOMContentLoaded', () => {
-    initApp();
-});
+// Initialize game settings and bindings immediately (modules are deferred by default)
+initApp();
 
-function initApp() {
+async function initApp() {
+    // Lazy-load Firebase configurations asynchronously
+    await initFirebase();
+
     // Register PWA Service Worker
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').catch(err => {
