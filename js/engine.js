@@ -1,5 +1,7 @@
 /* Core Mahjong Rules and Validation Engine */
 
+import { buildExpandedPracticeHands } from './practice-card.js?v=1';
+
 export const SUITS = {
     DOTS: 'dots',
     BAMS: 'bams',
@@ -136,7 +138,10 @@ export const CARD_CATEGORIES = {
     LIKE: 'like',
     WINDS_DRAGONS: 'winds',
     NUM_369: '369',
-    SINGLES_PAIRS: 'singles'
+    SINGLES_PAIRS: 'singles',
+    ODDS: 'odds',
+    QUINTS: 'quints',
+    CUSTOM: 'custom'
 };
 
 export const HANDS_CARD = {
@@ -319,6 +324,90 @@ export const HANDS_CARD = {
         }
     ]
 };
+
+// Add the larger original practice set without changing the tested starter hands above.
+const expandedHands = buildExpandedPracticeHands();
+for (const [category, hands] of Object.entries(expandedHands)) {
+    HANDS_CARD[category] = [...(HANDS_CARD[category] || []), ...hands];
+}
+
+const CUSTOM_CARD_STORAGE_KEY = 'mahjong-custom-hands-v1';
+
+function readSavedCustomHands() {
+    try {
+        const saved = JSON.parse(globalThis.localStorage?.getItem(CUSTOM_CARD_STORAGE_KEY) || '[]');
+        return Array.isArray(saved) ? saved.filter(isValidSavedHand) : [];
+    } catch {
+        return [];
+    }
+}
+
+function isValidSavedHand(hand) {
+    return hand && typeof hand.id === 'string' && typeof hand.display === 'string' &&
+        Array.isArray(hand.groups) && hand.groups.reduce((sum, group) => sum + Number(group.size || 0), 0) === 14;
+}
+
+HANDS_CARD[CARD_CATEGORIES.CUSTOM] = readSavedCustomHands();
+
+function persistCustomHands() {
+    try {
+        globalThis.localStorage?.setItem(CUSTOM_CARD_STORAGE_KEY, JSON.stringify(HANDS_CARD[CARD_CATEGORIES.CUSTOM]));
+    } catch {
+        // Private browsing or locked-down storage should not break play.
+    }
+}
+
+// Custom notation examples: FF 1111A 2222B 3333C, NN EEE 4444A RRRRR.
+// A/B/C mean distinct numbered suits; 0 represents the White Dragon (soap).
+export function parseCustomPattern(pattern) {
+    const tokens = String(pattern || '').toUpperCase().trim().split(/[\s,|/]+/).filter(Boolean);
+    if (!tokens.length) throw new Error('Enter a 14-tile pattern.');
+
+    const groups = tokens.map(token => {
+        if (/^F{1,6}$/.test(token)) return { size: token.length, suit: SUITS.FLOWERS, val: 'F', isRelative: false };
+        if (/^([1-9])\1{0,5}[ABC]$/.test(token)) {
+            const suit = token.at(-1);
+            const digits = token.slice(0, -1);
+            return { size: digits.length, suit, val: Number(digits[0]), isRelative: false };
+        }
+        if (/^([ESWN])\1{0,5}$/.test(token)) return { size: token.length, suit: SUITS.WINDS, val: token[0], isRelative: false };
+        if (/^([RG0])\1{0,5}$/.test(token)) return { size: token.length, suit: SUITS.DRAGONS, val: token[0] === '0' ? 'W' : token[0], isRelative: false };
+        throw new Error(`“${token}” is not valid notation.`);
+    });
+
+    const tileCount = groups.reduce((sum, group) => sum + group.size, 0);
+    if (tileCount !== 14) throw new Error(`The pattern has ${tileCount} tiles; it must have exactly 14.`);
+    const suitVars = new Set(groups.map(group => group.suit).filter(suit => ['A', 'B', 'C'].includes(suit)));
+    if (suitVars.has('C') && (!suitVars.has('A') || !suitVars.has('B'))) throw new Error('Use A and B before using suit C.');
+    if (suitVars.has('B') && !suitVars.has('A')) throw new Error('Use suit A before using suit B.');
+    return groups;
+}
+
+export function saveCustomHand({ name, pattern, isConcealed = false }) {
+    const cleanName = String(name || '').trim().slice(0, 60) || 'My custom hand';
+    const cleanPattern = String(pattern || '').toUpperCase().trim().replace(/\s+/g, ' ');
+    const groups = parseCustomPattern(cleanPattern);
+    const customHand = {
+        id: `custom_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        display: cleanPattern,
+        desc: cleanName,
+        groups,
+        isConcealed: Boolean(isConcealed),
+        isCustom: true
+    };
+    HANDS_CARD[CARD_CATEGORIES.CUSTOM].push(customHand);
+    persistCustomHands();
+    return customHand;
+}
+
+export function deleteCustomHand(id) {
+    const hands = HANDS_CARD[CARD_CATEGORIES.CUSTOM];
+    const index = hands.findIndex(hand => hand.id === id);
+    if (index < 0) return false;
+    hands.splice(index, 1);
+    persistCustomHands();
+    return true;
+}
 
 // Hand Matching Engine Helpers
 // Returns frequency of non-Joker tiles in hand: { 'dots_5': 2, 'flowers_F': 1 }

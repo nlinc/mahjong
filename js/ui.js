@@ -1,4 +1,4 @@
-import { SUITS, HANDS_CARD, CARD_CATEGORIES, analyzeHandStrengths } from './engine.js?v=6';
+import { SUITS, HANDS_CARD, CARD_CATEGORIES, analyzeHandStrengths, saveCustomHand, deleteCustomHand } from './engine.js?v=7';
 
 // DOM selectors
 export const elements = {
@@ -366,17 +366,73 @@ export function renderCharlestonStep(step, selectedTiles, onTileRemove, onConfir
 
 let latestHandStrengths = []; // Cache of the latest analysis
 
+function escapeHtml(value) {
+    return String(value).replace(/[&<>'"]/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+    })[char]);
+}
+
 // Setup Card Catalog viewer
 export function initCardReference() {
     const tabs = document.querySelectorAll('.card-viewer-modal .tab-btn');
+
+    const updateHandCount = () => {
+        const count = Object.entries(HANDS_CARD)
+            .filter(([category]) => category !== CARD_CATEGORIES.CUSTOM)
+            .reduce((sum, [, hands]) => sum + hands.length, 0);
+        const countEl = document.getElementById('practice-hand-count');
+        if (countEl) countEl.textContent = String(count);
+    };
+
+    const renderCustomEditor = () => {
+        const editor = document.createElement('section');
+        editor.className = 'custom-card-editor';
+        editor.innerHTML = `
+            <div class="custom-editor-heading">
+                <div><h3>Add a hand from your card</h3><p>Saved privately on this device and used by the co-pilot and Mahjong checker.</p></div>
+                <span class="custom-count">${HANDS_CARD[CARD_CATEGORIES.CUSTOM].length} saved</span>
+            </div>
+            <form id="custom-hand-form">
+                <label for="custom-hand-name">Hand name or card section</label>
+                <input id="custom-hand-name" maxlength="60" placeholder="Example: Consecutive run #1">
+                <label for="custom-hand-pattern">14-tile pattern</label>
+                <input id="custom-hand-pattern" autocapitalize="characters" autocomplete="off" placeholder="FF 1111A 2222B 3333C" required>
+                <div class="notation-help"><strong>How:</strong> Repeat each tile, then add A/B/C for numbered suits. Use F for Flowers; E/S/W/N for winds; R/G/0 for Red/Green/White Dragons.</div>
+                <label class="custom-concealed"><input id="custom-hand-concealed" type="checkbox"> Concealed hand</label>
+                <p id="custom-hand-error" class="custom-hand-error" role="alert"></p>
+                <button class="btn btn-primary btn-sm" type="submit">Save Hand</button>
+            </form>`;
+        elements.cardScrollView.appendChild(editor);
+
+        editor.querySelector('#custom-hand-form').addEventListener('submit', event => {
+            event.preventDefault();
+            const error = editor.querySelector('#custom-hand-error');
+            try {
+                saveCustomHand({
+                    name: editor.querySelector('#custom-hand-name').value,
+                    pattern: editor.querySelector('#custom-hand-pattern').value,
+                    isConcealed: editor.querySelector('#custom-hand-concealed').checked
+                });
+                loadCategory(CARD_CATEGORIES.CUSTOM);
+            } catch (err) {
+                error.textContent = err.message;
+            }
+        });
+    };
     
     const loadCategory = (cat) => {
         tabs.forEach(t => t.classList.toggle('active', t.getAttribute('data-category') === cat));
         elements.cardScrollView.innerHTML = '';
+        elements.cardScrollView.scrollTop = 0;
+
+        if (cat === CARD_CATEGORIES.CUSTOM) renderCustomEditor();
         
         const hands = HANDS_CARD[cat] || [];
         if (hands.length === 0) {
-            elements.cardScrollView.innerHTML = '<p class="small-text">No hands defined for this category.</p>';
+            const empty = document.createElement('p');
+            empty.className = 'small-text custom-empty';
+            empty.textContent = cat === CARD_CATEGORIES.CUSTOM ? 'No custom hands yet. Add the first one above.' : 'No hands defined for this category.';
+            elements.cardScrollView.appendChild(empty);
             return;
         }
         
@@ -389,13 +445,25 @@ export function initCardReference() {
             const pctText = strength ? `<div class="card-match-pct${strength.percentage >= 50 ? ' high' : ''}">${strength.percentage}% Match</div>` : '';
 
             row.innerHTML = `
-                <div class="hand-pattern">${h.display}</div>
+                <div class="hand-pattern">${escapeHtml(h.display)}</div>
                 <div class="hand-details">
-                    <span>${h.desc}</span>
+                    <span>${escapeHtml(h.desc)}</span>
                     <span class="expose-badge">${h.isConcealed ? 'C' : 'X'}</span>
                 </div>
                 ${pctText}
             `;
+            if (h.isCustom) {
+                const remove = document.createElement('button');
+                remove.className = 'btn-delete-hand';
+                remove.type = 'button';
+                remove.textContent = 'Delete';
+                remove.setAttribute('aria-label', `Delete ${h.desc}`);
+                remove.addEventListener('click', () => {
+                    deleteCustomHand(h.id);
+                    loadCategory(CARD_CATEGORIES.CUSTOM);
+                });
+                row.appendChild(remove);
+            }
             elements.cardScrollView.appendChild(row);
         });
     };
@@ -407,6 +475,7 @@ export function initCardReference() {
     });
     
     // Default load first
+    updateHandCount();
     loadCategory('consec');
 }
 

@@ -1,7 +1,7 @@
 /* Unit Tests for Mahjong PWA validation engine */
 import {
     createWall, sortHandBySuit, sortHandByValue, 
-    checkMahjong, SUITS 
+    checkMahjong, SUITS, HANDS_CARD, parseCustomPattern, checkGroupMatch
 } from './js/engine.js';
 import { readFileSync } from 'node:fs';
 
@@ -152,6 +152,27 @@ try {
     assert(missingRegistryNames.length === 0, `Every app element reference must be registered${missingRegistryNames.length ? `: ${missingRegistryNames.join(', ')}` : ''}`);
 } catch (e) {
     assert(false, `DOM contract checks failed: ${e.message}`);
+}
+
+// 6. Expanded and custom card checks
+try {
+    const practiceHands = Object.entries(HANDS_CARD)
+        .filter(([category]) => category !== 'custom')
+        .flatMap(([, hands]) => hands);
+    assert(practiceHands.length === 81, `Expanded original card should contain 81 hands (got ${practiceHands.length})`);
+    const malformed = practiceHands.filter(hand =>
+        !Array.isArray(hand.groups) || hand.groups.some(Array.isArray) ||
+        hand.groups.reduce((sum, group) => sum + Number(group.size || 0), 0) !== 14
+    );
+    assert(malformed.length === 0, `Every practice pattern must define exactly 14 tiles${malformed.length ? `: ${malformed.map(hand => hand.id).join(', ')}` : ''}`);
+
+    const customGroups = parseCustomPattern('FF 1111A 2222B 3333C');
+    assert(customGroups.reduce((sum, group) => sum + group.size, 0) === 14, 'Custom notation should parse a complete 14-tile hand');
+    let invalidCustomRejected = false;
+    try { parseCustomPattern('FF 111A'); } catch { invalidCustomRejected = true; }
+    assert(invalidCustomRejected, 'Custom notation should reject incomplete hands');
+} catch (e) {
+    assert(false, `Expanded card checks failed: ${e.message}`);
 }
 
 console.log("-------------------------------------------------");

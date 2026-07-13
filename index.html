@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>American Mahjong PWA</title>
-    <link rel="stylesheet" href="style.css?v=11">
+    <link rel="stylesheet" href="style.css?v=12">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -271,7 +271,10 @@
         <div id="card-overlay" class="overlay hidden">
             <div class="card-viewer-modal glass">
                 <div class="modal-header">
-                    <h2>Practice Hand Card Reference</h2>
+                    <div>
+                        <h2>Lincoln Practice Card</h2>
+                        <p class="card-subtitle"><span id="practice-hand-count">0</span> original practice hands · not an official annual card</p>
+                    </div>
                     <button id="btn-close-card" class="btn-close">✕</button>
                 </div>
                 <div class="modal-tabs">
@@ -281,12 +284,15 @@
                     <button class="tab-btn" data-category="winds">Winds-Dragons</button>
                     <button class="tab-btn" data-category="369">369</button>
                     <button class="tab-btn" data-category="singles">Singles & Pairs</button>
+                    <button class="tab-btn" data-category="odds">Odds</button>
+                    <button class="tab-btn" data-category="quints">Quints</button>
+                    <button class="tab-btn tab-btn-custom" data-category="custom">＋ My Card</button>
                 </div>
                 <div class="card-content-body" id="card-scroll-view">
                     <!-- Hands injected dynamically by category selection -->
                 </div>
                 <div class="card-footer-legend glass-dark">
-                    <p><strong>Legend:</strong> <strong>C</strong> = Concealed (Must be self-drawn, no calling discards). <strong>X</strong> = Exposeable. Colors indicate suit matching (e.g., 2 suits vs. 1 suit). <strong>F</strong> = Flower, <strong>J</strong> = Joker.</p>
+                    <p><strong>Legend:</strong> <strong>C</strong> = Concealed. <strong>X</strong> = Exposeable. A/B/C mean different numbered suits. <strong>F</strong> = Flower. Custom hands stay on this device.</p>
                 </div>
             </div>
         </div>
@@ -300,7 +306,7 @@
                 </div>
                 <div class="guide-content">
                     <h3>The Absolute Basics</h3>
-                    <p>American Mahjong is played with 4 players and 152 tiles. The goal is to be the first to build a hand of 14 tiles that matches one of the exact hands on the selected annual card. This app currently includes a compact practice card for learning and play-testing.</p>
+                    <p>American Mahjong is played with 4 players and 152 tiles. The goal is to be the first to build a hand of 14 tiles that matches one of the exact hands on the selected card. This app includes a large original practice card plus a custom-card editor for cards your family owns.</p>
                     
                     <h3>Tile Composition</h3>
                     <ul>
@@ -348,6 +354,6 @@
     </div>
 
     <!-- Scripts -->
-    <script type="module" src="js/app.js?v=9"></script>
+    <script type="module" src="js/app.js?v=11"></script>
 </body>
 </html>
