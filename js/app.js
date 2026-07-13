@@ -9,7 +9,7 @@ import {
     renderDiscardRiver, renderOpponentSeat, renderMyExposures, renderClaimPrompt,
     renderCharlestonStep, setupMenuOverlay, setupGuideOverlay, setupCardOverlay,
     getTileChar, renderCoPilotSuggestions
-} from './ui.js?v=7';
+} from './ui.js?v=8';
 import {
     createRoom, joinRoom, subscribeToRoom, updateRoom, mutateRoom, leaveRoom, initFirebase
 } from './firebase.js?v=6';
@@ -67,7 +67,10 @@ function setupUIEvents() {
     });
     elements.btnBackToSolo.addEventListener('click', closeMultiplayerPanel);
     elements.btnCreateRoom.addEventListener('click', handleCreateRoom);
-    elements.btnJoinRoom.addEventListener('click', handleJoinRoom);
+    elements.joinRoomForm.addEventListener('submit', event => {
+        event.preventDefault();
+        handleJoinRoom();
+    });
     elements.btnLeaveLobby.addEventListener('click', handleLeaveLobby);
     elements.btnStartGame.addEventListener('click', handleStartGame);
     elements.chkFillBots.addEventListener('change', refreshLobbyStartButton);
@@ -84,7 +87,14 @@ function setupUIEvents() {
     if (roomParam) {
         elements.btnMultiplayerLobby.click();
         elements.inputRoomId.value = roomParam.toUpperCase();
+        showLobbyMessage(`Room ${roomParam.toUpperCase()} is ready. Enter your name, then confirm to join.`);
+        elements.inputPlayerName.focus();
     }
+}
+
+function showLobbyMessage(message, type = 'info') {
+    elements.lobbyMessage.textContent = message;
+    elements.lobbyMessage.className = `lobby-message ${type}`;
 }
 
 function closeMultiplayerPanel() {
@@ -590,23 +600,30 @@ async function handleCreateRoom() {
     appState.playerIndex = 0;
     switchScreen(elements.roomLobbyScreen);
     elements.lobbyRoomCode.textContent = roomCode;
+    elements.btnCreateRoom.disabled = true;
     try {
         const room = await createRoom(roomCode, appState.playerName);
         handleRoomStateUpdate(room);
         appState.unsubscribe = await subscribeToRoom(roomCode, handleRoomStateUpdate);
-        showToast('Room created. Share the code with family.');
     } catch (error) {
-        showToast(error.message || 'Could not create room.');
         switchScreen(elements.lobbyScreen);
+        showLobbyMessage(error.message || 'Could not create room.', 'error');
+    } finally {
+        elements.btnCreateRoom.disabled = false;
     }
 }
 
 async function handleJoinRoom() {
     const roomCode = elements.inputRoomId.value.trim().toUpperCase();
-    if (roomCode.length !== 5) return showToast('Enter a valid 5-character room code.');
+    const playerName = elements.inputPlayerName.value.trim();
+    if (!playerName) return showLobbyMessage('Enter your name before joining.', 'error');
+    if (!/^[A-Z0-9]{5}$/.test(roomCode)) return showLobbyMessage('Enter the 5-character room code exactly as shared.', 'error');
     appState.mode = 'multi';
-    appState.playerName = `Player ${Math.floor(Math.random() * 90) + 10}`;
+    appState.playerName = playerName.slice(0, 20);
     appState.roomId = roomCode;
+    elements.btnJoinRoom.disabled = true;
+    elements.btnJoinRoom.textContent = 'Joining…';
+    showLobbyMessage(`Looking for room ${roomCode}…`);
     try {
         const room = await joinRoom(roomCode, appState.playerName);
         appState.playerIndex = room.players.length - 1;
@@ -614,9 +631,11 @@ async function handleJoinRoom() {
         elements.lobbyRoomCode.textContent = roomCode;
         handleRoomStateUpdate(room);
         appState.unsubscribe = await subscribeToRoom(roomCode, handleRoomStateUpdate);
-        showToast('Joined room.');
     } catch (error) {
-        showToast(error.message || 'Could not join room.');
+        showLobbyMessage(error.message || 'Could not join room. Check the code and try again.', 'error');
+    } finally {
+        elements.btnJoinRoom.disabled = false;
+        elements.btnJoinRoom.textContent = 'Confirm & Join';
     }
 }
 

@@ -26,9 +26,11 @@ export const elements = {
     btnRestartGame: document.getElementById('btn-restart-game'),
     btnLeaveGame: document.getElementById('btn-leave-game'),
     btnCloseMenu: document.getElementById('btn-close-menu'),
+    joinRoomForm: document.getElementById('join-room-form'),
     
     // Game Inputs
     inputRoomId: document.getElementById('input-room-id'),
+    inputPlayerName: document.getElementById('input-player-name'),
     chkFillBots: document.getElementById('chk-fill-bots'),
     multiplayerPanels: document.getElementById('multiplayer-panels'),
     
@@ -36,6 +38,7 @@ export const elements = {
     lobbyRoomCode: document.getElementById('lobby-room-code'),
     lobbyPlayerCount: document.getElementById('lobby-player-count'),
     lobbyPlayersList: document.getElementById('lobby-players-list'),
+    lobbyMessage: document.getElementById('lobby-message'),
     lblGamePhase: document.getElementById('lbl-game-phase'),
     lblWallCount: document.getElementById('lbl-wall-count'),
     lblRoomIdDisplay: document.getElementById('lbl-room-id-display'),

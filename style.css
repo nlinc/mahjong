@@ -245,6 +245,47 @@ body, html {
     text-transform: uppercase;
 }
 
+.input-label {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+.join-name-input {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    color: #fff;
+    padding: 10px 12px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 1rem;
+}
+
+.join-name-input:focus {
+    border-color: var(--primary);
+    outline: none;
+}
+
+.lobby-message {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: rgba(59, 130, 246, 0.12);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #bfdbfe;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    text-align: left;
+}
+
+.lobby-message.error {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.35);
+    color: #fecaca;
+}
+
 .input-group {
     display: flex;
     width: 100%;
@@ -1131,7 +1172,11 @@ body, html {
 }
 
 /* MOBILE RESPONSIVE TWEAKS */
-    @media (max-width: 600px) {
+@media (max-width: 600px) {
+    #lobby-screen { overflow-y: auto; }
+    .lobby-card { margin: auto 0; }
+    .join-create-row { flex-direction: column; }
+
     .game-board-felt {
         grid-template-rows: 75px minmax(0, 1fr) auto;
         grid-template-columns: 80px 1fr 80px;
