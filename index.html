@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>American Mahjong PWA</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app-container">
+        <!-- LOBBY / WELCOME SCREEN -->
+        <section id="lobby-screen" class="screen active">
+            <div class="lobby-card glass">
+                <div class="logo-area">
+                    <span class="tile-icon">🀄</span>
+                    <h1>Mahjong PWA</h1>
+                    <p class="subtitle">American NMJL Ruleset</p>
+                </div>
+
+                <div class="mode-select">
+                    <button id="btn-single-player" class="btn btn-primary btn-glow">
+                        <span class="icon">🤖</span> Play Solo (with Bots)
+                    </button>
+                    <button id="btn-multiplayer-lobby" class="btn btn-secondary">
+                        <span class="icon">👥</span> Play with Family (Firebase)
+                    </button>
+                </div>
+
+                <div id="multiplayer-panels" class="hidden">
+                    <hr class="divider">
+                    <div class="join-create-row">
+                        <div class="panel-box">
+                            <h3>Create Game</h3>
+                            <button id="btn-create-room" class="btn btn-accent">Start New Room</button>
+                        </div>
+                        <div class="panel-box">
+                            <h3>Join Game</h3>
+                            <div class="input-group">
+                                <input type="text" id="input-room-id" placeholder="ROOM CODE" maxlength="5">
+                                <button id="btn-join-room" class="btn btn-primary">Join</button>
+                            </div>
+                        </div>
+                    </div>
+                    <button id="btn-back-to-solo" class="btn-text">← Back to Solo Mode</button>
+                </div>
+
+                <div class="rules-teaser glass-dark">
+                    <h3>Confused by the rules?</h3>
+                    <p>American Mahjong is famously complex. Click below to read the helper guide and view the hands card at any time.</p>
+                    <button id="btn-open-guide-lobby" class="btn btn-outline btn-sm">How to Play Guide</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- MULTIPLAYER LOBBY SCREEN -->
+        <section id="room-lobby-screen" class="screen">
+            <div class="lobby-card glass">
+                <h2>Room Lobby</h2>
+                <div class="room-code-display">
+                    <p>Room Code</p>
+                    <h1 id="lobby-room-code">-----</h1>
+                    <span class="copy-hint" id="btn-copy-code">Copy Share Link 🔗</span>
+                </div>
+
+                <div class="players-list-box">
+                    <h3>Players Joined (<span id="lobby-player-count">1</span>/4)</h3>
+                    <ul id="lobby-players-list">
+                        <li class="player-slot host">Host (You) <span class="badge">Ready</span></li>
+                        <li class="player-slot empty">Waiting for player...</li>
+                        <li class="player-slot empty">Waiting for player...</li>
+                        <li class="player-slot empty">Waiting for player...</li>
+                    </ul>
+                </div>
+
+                <div class="lobby-controls">
+                    <button id="btn-start-game" class="btn btn-primary btn-glow" disabled>Start Game (Need 4 Players)</button>
+                    <button id="btn-leave-lobby" class="btn btn-outline">Leave Room</button>
+                </div>
+                <div class="lobby-options glass-dark">
+                    <label>
+                        <input type="checkbox" id="chk-fill-bots" checked> Fill empty slots with bots
+                    </label>
+                </div>
+            </div>
+        </section>
+
+        <!-- GAME BOARD SCREEN -->
+        <section id="game-screen" class="screen">
+            <!-- Game Top Header Bar -->
+            <header class="game-header glass">
+                <div class="header-left">
+                    <span class="game-info-badge" id="lbl-game-phase">Phase: Dealing</span>
+                    <span class="game-info-badge" id="lbl-wall-count">Wall: 152</span>
+                </div>
+                <div class="header-center">
+                    <h2 class="room-indicator" id="lbl-room-id-display">Local Game</h2>
+                </div>
+                <div class="header-right">
+                    <button id="btn-view-card" class="btn btn-sm btn-outline btn-card-view">🎴 NMJL Card</button>
+                    <button id="btn-view-guide-game" class="btn btn-sm btn-outline">❓ Guide</button>
+                    <button id="btn-menu" class="btn btn-sm btn-outline">⚙️ Menu</button>
+                </div>
+            </header>
+
+            <!-- Main Felt Table -->
+            <main class="game-board-felt">
+                <!-- Opponent Top (Player 3) -->
+                <div class="player-seat seat-top" id="seat-top">
+                    <div class="opponent-profile">
+                        <div class="avatar">🤖</div>
+                        <div class="profile-details">
+                            <span class="name">Player 3</span>
+                            <span class="status-indicator">Thinking...</span>
+                        </div>
+                    </div>
+                    <div class="opponent-rack">
+                        <div class="tile-count-bar">13 Tiles</div>
+                        <div class="exposed-melds-row"></div>
+                    </div>
+                </div>
+
+                <!-- Opponent Left (Player 4) -->
+                <div class="player-seat seat-left" id="seat-left">
+                    <div class="opponent-profile">
+                        <div class="avatar">🤖</div>
+                        <div class="profile-details">
+                            <span class="name">Player 4</span>
+                            <span class="status-indicator">Concealed</span>
+                        </div>
+                    </div>
+                    <div class="opponent-rack">
+                        <div class="tile-count-bar">13 Tiles</div>
+                        <div class="exposed-melds-row"></div>
+                    </div>
+                </div>
+
+                <!-- Opponent Right (Player 2) -->
+                <div class="player-seat seat-right" id="seat-right">
+                    <div class="opponent-profile">
+                        <div class="avatar">🤖</div>
+                        <div class="profile-details">
+                            <span class="name">Player 2</span>
+                            <span class="status-indicator">Concealed</span>
+                        </div>
+                    </div>
+                    <div class="opponent-rack">
+                        <div class="tile-count-bar">13 Tiles</div>
+                        <div class="exposed-melds-row"></div>
+                    </div>
+                </div>
+
+                <!-- Central Table Area (Discard River and Active Call Actions) -->
+                <div class="table-center">
+                    <!-- Discard Pile -->
+                    <div class="discard-river" id="discard-river">
+                        <div class="river-placeholder">Discarded tiles will appear here</div>
+                    </div>
+
+                    <!-- Call Claims Console (Overlay on Center when prompt is active) -->
+                    <div id="claim-console" class="claim-overlay hidden">
+                        <p class="claim-tile-announcement">Player 2 discarded: <span id="claim-tile-display">🀄</span></p>
+                        <div class="claim-actions">
+                            <button id="btn-claim-pung" class="btn btn-sm btn-accent hidden">Call PUNG</button>
+                            <button id="btn-claim-kong" class="btn btn-sm btn-accent hidden">Call KONG</button>
+                            <button id="btn-claim-quint" class="btn btn-sm btn-accent hidden">Call QUINT</button>
+                            <button id="btn-claim-mahjong" class="btn btn-sm btn-primary btn-glow">Call MAHJONG</button>
+                            <button id="btn-claim-pass" class="btn btn-sm btn-outline">PASS</button>
+                        </div>
+                        <div class="claim-timer-bar"><div class="timer-fill"></div></div>
+                    </div>
+                </div>
+
+                <!-- Active HUD Notification Toast -->
+                <div id="game-toast" class="hud-toast hidden">Message Toast</div>
+
+                <!-- Player Rack (Bottom - Player 1) -->
+                <div class="player-seat seat-bottom" id="seat-bottom">
+                    <!-- Meld area for our exposure -->
+                    <div class="my-exposures-row" id="my-exposures-row"></div>
+
+                    <!-- Tile Rack -->
+                    <div class="rack-wood-shelf">
+                        <div class="tile-rack-slots" id="player-tile-rack">
+                            <!-- Tiles inserted dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Player Rack Action bar -->
+                    <div class="rack-controls">
+                        <div class="controls-left">
+                            <button id="btn-sort-suit" class="btn btn-sm btn-outline">🔀 Sort Suit</button>
+                            <button id="btn-sort-value" class="btn btn-sm btn-outline">🔢 Sort Value</button>
+                        </div>
+                        <div class="controls-center">
+                            <span class="turn-prompt-text" id="turn-instruction">Waiting for dealing to complete...</span>
+                        </div>
+                        <div class="controls-right">
+                            <button id="btn-declare-mahjong" class="btn btn-sm btn-primary btn-glow hidden">Mahjong!</button>
+                            <button id="btn-rack-discard" class="btn btn-sm btn-accent" disabled>Discard Selected</button>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </section>
+
+        <!-- CHARLESTON INTERACTIVE WIZARD OVERLAY -->
+        <div id="charleston-overlay" class="overlay hidden">
+            <div class="modal-card glass">
+                <div class="modal-header">
+                    <h2>The Charleston</h2>
+                    <span class="step-badge" id="char-step-title">First Pass: Right</span>
+                </div>
+                <div class="modal-body">
+                    <p class="char-instructions" id="char-instructions">Select 3 tiles from your rack to pass to the player on your right.</p>
+                    
+                    <div class="char-tile-selection-box">
+                        <p>Selected Tiles (<span id="char-select-count">0</span>/3):</p>
+                        <div class="char-selected-tiles-rack" id="char-selected-tiles-container">
+                            <!-- Selected items show here -->
+                            <div class="tile-placeholder">Select 3</div>
+                            <div class="tile-placeholder">Select 3</div>
+                            <div class="tile-placeholder">Select 3</div>
+                        </div>
+                    </div>
+
+                    <!-- Blind pass toggle during specific steps -->
+                    <div id="blind-pass-controls" class="blind-pass-box hidden">
+                        <p class="small-text">Blind Pass Available: You can pass up to 3 tiles from the incoming pass without looking at them.</p>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="chk-use-blind-pass">
+                            <span class="slider-round"></span> Enable Blind Pass
+                        </label>
+                        <div class="input-group blind-count-group hidden">
+                            <span>Tiles to pass blindly:</span>
+                            <input type="number" id="num-blind-count" min="1" max="3" value="1">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="btn-charleston-confirm" class="btn btn-primary" disabled>Confirm Pass</button>
+                    <!-- Stop second Charleston option -->
+                    <button id="btn-charleston-stop" class="btn btn-outline hidden">Stop Charleston</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- NMJL CARD VIEWER OVERLAY -->
+        <div id="card-overlay" class="overlay hidden">
+            <div class="card-viewer-modal glass">
+                <div class="modal-header">
+                    <h2>2026 NMJL Hand Card Reference</h2>
+                    <button id="btn-close-card" class="btn-close">✕</button>
+                </div>
+                <div class="modal-tabs">
+                    <button class="tab-btn active" data-category="consec">Consec. Runs</button>
+                    <button class="tab-btn" data-category="2468">2468</button>
+                    <button class="tab-btn" data-category="like">Like Numbers</button>
+                    <button class="tab-btn" data-category="winds">Winds-Dragons</button>
+                    <button class="tab-btn" data-category="369">369</button>
+                    <button class="tab-btn" data-category="singles">Singles & Pairs</button>
+                </div>
+                <div class="card-content-body" id="card-scroll-view">
+                    <!-- Hands injected dynamically by category selection -->
+                </div>
+                <div class="card-footer-legend glass-dark">
+                    <p><strong>Legend:</strong> <strong>C</strong> = Concealed (Must be self-drawn, no calling discards). <strong>X</strong> = Exposeable. Colors indicate suit matching (e.g., 2 suits vs. 1 suit). <strong>F</strong> = Flower, <strong>J</strong> = Joker.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- HOW TO PLAY GUIDE OVERLAY -->
+        <div id="guide-overlay" class="overlay hidden">
+            <div class="guide-modal glass">
+                <div class="modal-header">
+                    <h2>How to Play American Mahjong</h2>
+                    <button id="btn-close-guide" class="btn-close">✕</button>
+                </div>
+                <div class="guide-content">
+                    <h3>The Absolute Basics</h3>
+                    <p>American Mahjong is played with 4 players and 152 tiles. The goal is to be the first to build a hand of 14 tiles that matches one of the exact hands on the official <strong>NMJL Card</strong>.</p>
+                    
+                    <h3>Tile Composition</h3>
+                    <ul>
+                        <li><strong>Suits:</strong> Dots 🔴, Bams 🎋, Crakes 🀇 (numbers 1-9, four of each)</li>
+                        <li><strong>Winds:</strong> East, South, West, North (four of each)</li>
+                        <li><strong>Dragons:</strong> Green, Red, White (Sope) (four of each)</li>
+                        <li><strong>Flowers:</strong> 8 special flower tiles (always counts as value cards, cannot be used in numerical runs)</li>
+                        <li><strong>Jokers:</strong> 8 wild tiles. Can replace any tile in a Pung (3), Kong (4), Quint (5), or Sextet (6). <em>Cannot be used for singles or pairs!</em></li>
+                    </ul>
+
+                    <h3>Step 1: The Charleston (Passing Tiles)</h3>
+                    <p>At the start, you pass unwanted tiles to build your hand strategy. The mandatory phase passes tiles to: <strong>Right</strong>, then <strong>Across</strong>, then <strong>Left</strong>. If all players agree, a second optional set is performed: <strong>Left</strong>, <strong>Across</strong>, <strong>Right</strong>. Finally, you can perform an optional <strong>Courtesy Pass</strong> with the player across.</p>
+
+                    <h3>Step 2: Drawing & Discarding</h3>
+                    <p>Players take turns drawing a tile from the wall and discarding one. If a tile is discarded, anyone can claim it if it completes their meld:</p>
+                    <ul>
+                        <li><strong>Pung:</strong> 3 identical tiles</li>
+                        <li><strong>Kong:</strong> 4 identical tiles</li>
+                        <li><strong>Quint:</strong> 5 identical tiles (requires Jokers)</li>
+                        <li><strong>Sextet:</strong> 6 identical tiles (requires Jokers)</li>
+                    </ul>
+                    <p>To claim a discard, click the call button. You must immediately expose the completed meld on your rack. You cannot claim sequences (Chows).</p>
+
+                    <h3>Step 3: Declaring Mahjong</h3>
+                    <p>When your hand has 14 tiles matching a pattern on the card, call <strong>MAHJONG</strong>! If you match the hand, you win the round.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SETTINGS / SYSTEM MENU OVERLAY -->
+        <div id="menu-overlay" class="overlay hidden">
+            <div class="modal-card glass">
+                <div class="modal-header">
+                    <h2>Game Menu</h2>
+                </div>
+                <div class="modal-body menu-actions">
+                    <button id="btn-restart-game" class="btn btn-secondary">Restart Match</button>
+                    <button id="btn-leave-game" class="btn btn-outline">Exit to Main Lobby</button>
+                </div>
+                <div class="modal-footer">
+                    <button id="btn-close-menu" class="btn btn-primary">Close Menu</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="js/engine.js"></script>
+    <script type="module" src="js/bot.js"></script>
+    <script type="module" src="js/ui.js"></script>
+    <script type="module" src="js/firebase.js"></script>
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>

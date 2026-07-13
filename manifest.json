@@ -1,0 +1,22 @@
+{
+  "name": "American Mahjong PWA",
+  "short_name": "Mahjong PWA",
+  "description": "A premium, mobile-first American Mahjong game under NMJL rules.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f1319",
+  "theme_color": "#0f1319",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
