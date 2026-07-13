@@ -9,7 +9,7 @@ import {
     renderDiscardRiver, renderOpponentSeat, renderMyExposures, renderClaimPrompt,
     renderCharlestonStep, setupMenuOverlay, setupGuideOverlay, setupCardOverlay,
     getTileChar, renderCoPilotSuggestions
-} from './ui.js?v=6';
+} from './ui.js?v=7';
 import {
     createRoom, joinRoom, subscribeToRoom, updateRoom, mutateRoom, leaveRoom, initFirebase
 } from './firebase.js?v=6';

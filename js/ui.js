@@ -91,9 +91,7 @@ export const TILE_UNICODE = {
 };
 
 export function getTileChar(suit, val) {
-    if (suit === SUITS.FLOWERS) return TILE_UNICODE[SUITS.FLOWERS];
-    if (suit === SUITS.JOKERS) return TILE_UNICODE[SUITS.JOKERS];
-    return TILE_UNICODE[suit][val] || '🀄';
+    return getTileLabel(suit, val);
 }
 
 function getTileLabel(suit, val) {
@@ -101,6 +99,38 @@ function getTileLabel(suit, val) {
     if (suit === SUITS.FLOWERS) return 'Flower';
     if (suit === SUITS.JOKERS) return 'Joker';
     return `${val} ${suitNames[suit] || suit}`;
+}
+
+function getTileFaceMarkup(suit, val) {
+    const safeVal = String(val);
+    if (suit === SUITS.DOTS) {
+        const pips = Array.from({ length: Number(val) }, (_, index) => `<i class="pip pip-${index % 3}"></i>`).join('');
+        return `<span class="tile-corner">${safeVal}</span><span class="tile-pips count-${safeVal}">${pips}</span>`;
+    }
+    if (suit === SUITS.BAMS) {
+        const sticks = Array.from({ length: Number(val) }, (_, index) => `<i class="bam bam-${index % 2}"></i>`).join('');
+        return `<span class="tile-corner">${safeVal}</span><span class="tile-bams count-${safeVal}">${sticks}</span>`;
+    }
+    if (suit === SUITS.CRAKES) {
+        return `<span class="tile-corner">${safeVal}</span><span class="tile-glyph crak-glyph">萬</span>`;
+    }
+    if (suit === SUITS.WINDS) {
+        return `<span class="tile-glyph wind-glyph">${safeVal}</span><span class="tile-caption">WIND</span>`;
+    }
+    if (suit === SUITS.DRAGONS) {
+        const glyph = { G: '發', R: '中', W: '白' }[val] || safeVal;
+        return `<span class="tile-glyph dragon-glyph">${glyph}</span><span class="tile-caption">DRAGON</span>`;
+    }
+    if (suit === SUITS.FLOWERS) {
+        return '<span class="tile-glyph flower-glyph">✿</span><span class="tile-caption">FLOWER</span>';
+    }
+    return '<span class="tile-glyph joker-glyph">★</span><span class="tile-caption">JOKER</span>';
+}
+
+function setTileFace(element, tile) {
+    element.setAttribute('data-suit', tile.suit);
+    element.setAttribute('data-val', tile.val);
+    element.innerHTML = getTileFaceMarkup(tile.suit, tile.val);
 }
 
 // Show active screen
@@ -145,11 +175,9 @@ export function renderPlayerRack(hand, selectedId, onTileSelect, onTileDblClick)
             tileEl.classList.add('selected');
         }
         tileEl.setAttribute('data-id', tile.id);
-        tileEl.setAttribute('data-suit', tile.suit);
-        tileEl.setAttribute('data-val', tile.val);
+        setTileFace(tileEl, tile);
         tileEl.setAttribute('aria-label', getTileLabel(tile.suit, tile.val));
         tileEl.setAttribute('aria-pressed', String(tile.id === selectedId));
-        tileEl.textContent = getTileChar(tile.suit, tile.val);
         
         tileEl.addEventListener('click', () => {
             onTileSelect(tile.id);
@@ -178,9 +206,7 @@ export function renderDiscardRiver(discards) {
     discards.forEach((tile, index) => {
         const tileEl = document.createElement('div');
         tileEl.className = 'tile tile-discarded';
-        tileEl.setAttribute('data-suit', tile.suit);
-        tileEl.setAttribute('data-val', tile.val);
-        tileEl.textContent = getTileChar(tile.suit, tile.val);
+        setTileFace(tileEl, tile);
         
         // Highlight last discard
         if (index === discards.length - 1) {
@@ -223,9 +249,7 @@ export function renderOpponentSeat(seatIndex, seatDivId, playerState, isActiveTu
                 meld.forEach(tile => {
                     const tileEl = document.createElement('div');
                     tileEl.className = 'tile tile-exposed';
-                    tileEl.setAttribute('data-suit', tile.suit);
-                    tileEl.setAttribute('data-val', tile.val);
-                    tileEl.textContent = getTileChar(tile.suit, tile.val);
+                    setTileFace(tileEl, tile);
                     groupEl.appendChild(tileEl);
                 });
                 exposuresRow.appendChild(groupEl);
@@ -253,9 +277,7 @@ export function renderMyExposures(exposures) {
         meld.forEach(tile => {
             const tileEl = document.createElement('div');
             tileEl.className = 'tile tile-exposed';
-            tileEl.setAttribute('data-suit', tile.suit);
-            tileEl.setAttribute('data-val', tile.val);
-            tileEl.textContent = getTileChar(tile.suit, tile.val);
+            setTileFace(tileEl, tile);
             groupEl.appendChild(tileEl);
         });
         elements.myExposuresRow.appendChild(groupEl);
@@ -269,9 +291,8 @@ export function renderClaimPrompt(discardTile, discardPlayerName, claims, onClai
         return;
     }
     
-    elements.claimTileDisplay.textContent = getTileChar(discardTile.suit, discardTile.val);
     elements.claimConsole.querySelector('.claim-tile-announcement').innerHTML = 
-        `${discardPlayerName} discarded: <span id="claim-tile-display" data-suit="${discardTile.suit}">${getTileChar(discardTile.suit, discardTile.val)}</span>`;
+        `${discardPlayerName} discarded: <span id="claim-tile-display" class="tile claim-tile-face" data-suit="${discardTile.suit}" data-val="${discardTile.val}">${getTileFaceMarkup(discardTile.suit, discardTile.val)}</span>`;
     
     // Toggle action buttons
     elements.btnClaimPung.classList.toggle('hidden', !claims.includes('pung'));
@@ -319,10 +340,8 @@ export function renderCharlestonStep(step, selectedTiles, onTileRemove, onConfir
             slotEl = document.createElement('button');
             slotEl.type = 'button';
             slotEl.className = 'tile';
-            slotEl.setAttribute('data-suit', selectedTiles[i].suit);
-            slotEl.setAttribute('data-val', selectedTiles[i].val);
+            setTileFace(slotEl, selectedTiles[i]);
             slotEl.setAttribute('aria-label', `Remove ${getTileLabel(selectedTiles[i].suit, selectedTiles[i].val)} from pass`);
-            slotEl.textContent = getTileChar(selectedTiles[i].suit, selectedTiles[i].val);
             slotEl.addEventListener('click', () => {
                 onTileRemove(selectedTiles[i].id);
             });
