@@ -966,6 +966,10 @@ body {
     z-index: 500;
 }
 
+/* The Charleston intentionally sits below the player's rack so tiles remain
+   visible and tappable while the pass dialog is open. */
+#charleston-overlay { z-index: 200; }
+
 .modal-card {
     width: 90%;
     max-width: 440px;
