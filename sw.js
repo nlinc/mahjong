@@ -1,8 +1,8 @@
-const CACHE_NAME = 'mahjong-pwa-v22';
+const CACHE_NAME = 'mahjong-pwa-v23';
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=19',
+  './style.css?v=20',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',

@@ -244,6 +244,7 @@ try {
     assert(missingRegistryNames.length === 0, `Every app element reference must be registered${missingRegistryNames.length ? `: ${missingRegistryNames.join(', ')}` : ''}`);
     assert(!css.includes('.claim-tile-announcement span'), 'Claim prompt styles must not override nested tile labels');
     assert(html.includes('co-pilot-color-key') && css.includes('--pattern-suit-a'), 'Co-pilot and card reference must include the relative-suit color key');
+    assert(css.includes('.discard-river {\n    position: absolute;') && css.includes('.table-center {') && css.includes('overscroll-behavior: contain'), 'Discard river must scroll without contributing to mobile board height');
 } catch (e) {
     assert(false, `DOM contract checks failed: ${e.message}`);
 }
