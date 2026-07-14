@@ -338,7 +338,8 @@ export function renderRoundResult(result, winnerHand, winnerExposures, canStartR
     }
     const isDraw = result.type === 'draw';
     elements.roundResultIcon.textContent = isDraw ? '🤝' : '🏆';
-    elements.roundResultTitle.textContent = isDraw ? 'Round Drawn' : `${result.winnerName || 'Player'} Wins!`;
+    const winnerName = result.winnerName || 'Player';
+    elements.roundResultTitle.textContent = isDraw ? 'Round Drawn' : winnerName === 'You' ? 'You Win!' : `${winnerName} Wins!`;
     elements.roundResultSummary.textContent = result.message || (isDraw ? 'The wall is empty.' : 'Mahjong!');
 
     const hasPattern = Boolean(result.patternDisplay);

@@ -273,6 +273,8 @@ try {
     assert(ui.includes("W: 'White Dragon (Soap)'") && ui.includes('tile-caption">SOAP'), 'White Dragon must render and read as Soap');
     assert(css.includes('body.charleston-active .game-header') && css.includes('.tile-exposed.joker-exchange'), 'Charleston header access and highlighted Joker exchanges must remain styled');
     assert(ui.includes("tileEl.setAttribute('title', getTileLabel(tile.suit, tile.val))"), 'Discarded tiles must expose readable tile names');
+    assert(ui.includes("winnerName === 'You' ? 'You Win!'") && !ui.includes("`${result.winnerName || 'Player'} Wins!`"), 'Round result must use second-person winner grammar');
+    assert(app.includes("elements.roundResultOverlay.classList.add('hidden')") && app.indexOf("switchScreen(elements.lobbyScreen)") < app.lastIndexOf('await leaveRoom'), 'Exit to Lobby must hide the result and switch screens before remote cleanup');
 } catch (e) {
     assert(false, `DOM contract checks failed: ${e.message}`);
 }

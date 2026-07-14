@@ -10,7 +10,7 @@ import {
     renderDiscardRiver, renderOpponentSeat, renderMyExposures, renderClaimPrompt,
     renderCharlestonStep, setupMenuOverlay, setupGuideOverlay, setupCardOverlay,
     getTileChar, renderCoPilotSuggestions, renderRoundResult, showCardPattern
-} from './ui.js?v=17';
+} from './ui.js?v=18';
 import {
     createRoom, joinRoom, subscribeToRoom, updateRoom, mutateRoom, leaveRoom, initFirebase
 } from './firebase.js?v=10';
@@ -207,6 +207,10 @@ function makeWinResult(state, seat, players, match, message = null) {
 
 function makeDrawResult(message = 'The wall is empty. No player completed Mahjong.') {
     return { type: 'draw', message };
+}
+
+function winnerAnnouncement(name) {
+    return name === 'You' ? 'You win with Mahjong!' : `${name} wins with Mahjong!`;
 }
 
 function updateRackUI() {
@@ -630,7 +634,7 @@ function executeClaim(state, seat, type, tile, players) {
         state.hands[seat].push(tile);
         const match = checkMahjong(state.hands[seat], state.exposures[seat]);
         state.gamePhase = 'gameover';
-        state.winnerMessage = `${players[seat].name} wins with Mahjong!`;
+        state.winnerMessage = winnerAnnouncement(players[seat].name);
         state.roundResult = makeWinResult(state, seat, players, match);
         state.claimWindow = null;
         state.activeDiscard = null;
@@ -767,7 +771,7 @@ function performBotTurn(state, seat, players) {
     const match = checkMahjong(state.hands[seat], state.exposures[seat]);
     if (match.matched) {
         state.gamePhase = 'gameover';
-        state.winnerMessage = `${players[seat].name} wins with Mahjong!`;
+        state.winnerMessage = winnerAnnouncement(players[seat].name);
         state.roundResult = makeWinResult(state, seat, players, match);
         return;
     }
@@ -908,11 +912,15 @@ async function handleLeaveLobby() {
     clearTimeout(botTimer);
     if (appState.unsubscribe) appState.unsubscribe();
     appState.unsubscribe = null;
-    if (appState.roomId) await leaveRoom(appState.roomId, appState.playerIndex).catch(() => {});
+    const roomId = appState.roomId;
+    const playerIndex = appState.playerIndex;
     appState.roomId = null;
     appState.players = [];
+    elements.roundResultOverlay.classList.add('hidden');
+    elements.menuOverlay.classList.add('hidden');
     closeMultiplayerPanel();
     switchScreen(elements.lobbyScreen);
+    if (roomId) await leaveRoom(roomId, playerIndex).catch(() => {});
 }
 
 function restartLocalGame() {
@@ -930,6 +938,8 @@ async function startNextRound() {
 function exitToMainLobby() {
     clearTimeout(botTimer);
     document.body.classList.remove('charleston-active');
+    elements.roundResultOverlay.classList.add('hidden');
+    elements.menuOverlay.classList.add('hidden');
     if (appState.mode === 'multi') handleLeaveLobby();
     else switchScreen(elements.lobbyScreen);
 }
