@@ -1,15 +1,15 @@
 /* Main application coordinator. Game state is canonical and shared by solo and multiplayer. */
 import {
     createWall, shuffle, sortHandBySuit, sortHandByValue,
-    checkDiscardClaims, checkMahjong, SUITS
-} from './engine.js?v=7';
-import { botSelectCharlestonPass, botSelectDiscard, botDecideClaim } from './bot.js?v=7';
+    checkDiscardClaims, checkMahjong, buildClaimMeld, SUITS
+} from './engine.js?v=8';
+import { botSelectCharlestonPass, botSelectDiscard, botDecideClaim } from './bot.js?v=8';
 import {
     elements, switchScreen, toggleOverlay, showToast, renderPlayerRack,
     renderDiscardRiver, renderOpponentSeat, renderMyExposures, renderClaimPrompt,
     renderCharlestonStep, setupMenuOverlay, setupGuideOverlay, setupCardOverlay,
     getTileChar, renderCoPilotSuggestions
-} from './ui.js?v=10';
+} from './ui.js?v=11';
 import {
     createRoom, joinRoom, subscribeToRoom, updateRoom, mutateRoom, leaveRoom, initFirebase
 } from './firebase.js?v=6';
@@ -167,7 +167,7 @@ function renderGame() {
 function updateRackUI() {
     renderPlayerRack(myHand(), appState.selectedTileId, handleTileSelect, handleTileDoubleClick);
     renderMyExposures(myExposures());
-    if (!elements.coPilotPanel.classList.contains('hidden')) renderCoPilotSuggestions(myHand());
+    if (!elements.coPilotPanel.classList.contains('hidden')) renderCoPilotSuggestions(myHand(), myExposures());
 }
 
 function updateOpponentsUI() {
@@ -191,7 +191,7 @@ function updateOpponentsUI() {
 function toggleCoPilot() {
     const hidden = elements.coPilotPanel.classList.toggle('hidden');
     elements.btnToggleCopilot.classList.toggle('active', !hidden);
-    if (!hidden) renderCoPilotSuggestions(myHand());
+    if (!hidden) renderCoPilotSuggestions(myHand(), myExposures());
 }
 
 function sortMyHand(sorter) {
@@ -472,8 +472,8 @@ function resolveClaimWindow(state, players) {
 }
 
 function executeClaim(state, seat, type, tile, players) {
-    state.discards.pop();
     if (type === 'mahjong') {
+        state.discards.pop();
         state.hands[seat].push(tile);
         state.gamePhase = 'gameover';
         state.winnerMessage = `${players[seat].name} wins with Mahjong!`;
@@ -482,26 +482,18 @@ function executeClaim(state, seat, type, tile, players) {
         return;
     }
 
-    const size = { pung: 3, kong: 4, quint: 5 }[type];
-    if (!size) return;
-    const needed = size - 1;
     const hand = state.hands[seat];
-    const chosen = [];
-    for (const candidate of hand) {
-        if (chosen.length < needed && candidate.suit === tile.suit && candidate.val === tile.val) chosen.push(candidate);
-    }
-    for (const candidate of hand) {
-        if (chosen.length < needed && candidate.suit === SUITS.JOKERS) chosen.push(candidate);
-    }
-    if (chosen.length !== needed) {
+    const claim = buildClaimMeld(hand, tile, type);
+    if (!claim) {
         state.currentTurn = nextSeat(state.claimWindow.discarder);
         state.claimWindow = null;
         state.activeDiscard = null;
         return;
     }
-    const chosenIds = new Set(chosen.map(candidate => candidate.id));
+    state.discards.pop();
+    const chosenIds = new Set(claim.consumedIds);
     state.hands[seat] = hand.filter(candidate => !chosenIds.has(candidate.id));
-    state.exposures[seat].push([...chosen, tile]);
+    state.exposures[seat].push(claim.meld);
     state.currentTurn = seat;
     state.claimWindow = null;
     state.activeDiscard = null;

@@ -1,7 +1,8 @@
 /* Unit Tests for Mahjong PWA validation engine */
 import {
     createWall, sortHandBySuit, sortHandByValue, 
-    checkMahjong, SUITS, HANDS_CARD, parseCustomPattern, checkGroupMatch
+    checkMahjong, SUITS, HANDS_CARD, parseCustomPattern, checkGroupMatch,
+    analyzeHandStrengths, buildClaimMeld
 } from './js/engine.js';
 import { readFileSync } from 'node:fs';
 
@@ -123,6 +124,24 @@ try {
     const northExposure = [complete.slice(2, 5)];
     const concealed = [...complete.slice(0, 2), ...complete.slice(5)];
     assert(checkMahjong(concealed, northExposure).matched, 'Exposed tiles should count toward a valid exposable Mahjong hand');
+    const exposedSuggestions = analyzeHandStrengths(concealed, northExposure);
+    assert(exposedSuggestions.some(hand => hand.id === 'winds_1'), 'Co-pilot should retain patterns compatible with an exposed meld');
+    assert(exposedSuggestions.every(hand => !HANDS_CARD[hand.category].find(item => item.id === hand.id)?.isConcealed), 'Co-pilot must exclude concealed patterns after an exposure');
+
+    const southFlowerSouth = [[complete[11], complete[0], complete[12]]];
+    const remainingAfterInvalidExposure = complete.filter(tile => !southFlowerSouth[0].includes(tile));
+    assert(!checkMahjong(remainingAfterInvalidExposure, southFlowerSouth).matched, 'A mixed South-Flower-South exposure must never validate');
+    assert(analyzeHandStrengths(remainingAfterInvalidExposure, southFlowerSouth).length === 0, 'Co-pilot must reject every pattern for an illegal mixed exposure');
+
+    const claimRack = [
+        { id: 40, suit: SUITS.WINDS, val: 'S' },
+        { id: 41, suit: SUITS.FLOWERS, val: 'F' },
+        { id: 42, suit: SUITS.JOKERS, val: 'J' }
+    ];
+    const claimedSouth = { id: 43, suit: SUITS.WINDS, val: 'S' };
+    const builtClaim = buildClaimMeld(claimRack, claimedSouth, 'pung');
+    assert(builtClaim?.meld.every(tile => tile.suit === SUITS.WINDS || tile.suit === SUITS.JOKERS), 'Claim construction must consume only matching tiles or Jokers');
+    assert(!builtClaim?.consumedIds.includes(41), 'Claim construction must never consume an unrelated Flower');
 
     const concealedPattern = [
         { id: 20, suit: SUITS.FLOWERS, val: 'F' }, { id: 21, suit: SUITS.FLOWERS, val: 'F' },

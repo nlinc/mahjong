@@ -429,7 +429,7 @@ export function getTileFrequencies(tiles) {
 // A group template is: { size: N, suit: 'A' | 'B' | 'C' | 'any' | 'flower' | 'dragon' | 'wind', val: 'any' | valValue, isRelative: boolean, relOffset: number }
 // size: 1 (single), 2 (pair), 3 (pung), 4 (kong), 5 (quint), 6 (sextet)
 // Rules: Jokers CANNOT substitute in singles (size=1) or pairs (size=2).
-export function checkGroupMatch(reqGroups, tiles) {
+export function checkGroupMatch(reqGroups, tiles, exposures = []) {
     const { freq, jokers } = getTileFrequencies(tiles);
     
     // We will do backtrack-based mapping of suits (A, B, C) to actual suits (dots, bams, crakes)
@@ -499,7 +499,8 @@ export function checkGroupMatch(reqGroups, tiles) {
 
         for (const suitMap of suitMappings) {
             // Attempt to match the hand under this combination of baseVal and suitMap
-            if (tryMatchCombination(reqGroups, freq, jokers, baseVal, suitMap)) {
+            if (exposuresFitGroups(reqGroups, exposures, baseVal, suitMap) &&
+                tryMatchCombination(reqGroups, freq, jokers, baseVal, suitMap)) {
                 return true;
             }
         }
@@ -572,9 +573,39 @@ function getActualTileKey(group, baseVal, suitMap) {
     return `${suit}_${val}`;
 }
 
+// Every exposed meld must map to one complete, exposeable group in the card
+// pattern under the same suit/value interpretation as the rest of the hand.
+function exposuresFitGroups(groups, exposures, baseVal, suitMap) {
+    if (!exposures?.length) return true;
+    const usedGroups = new Set();
+
+    const assignExposure = exposureIndex => {
+        if (exposureIndex >= exposures.length) return true;
+        const meld = exposures[exposureIndex];
+        if (!Array.isArray(meld) || meld.length < 3 || meld.length > 6) return false;
+        const naturalTiles = meld.filter(tile => tile.suit !== SUITS.JOKERS);
+        if (!naturalTiles.length) return false;
+
+        for (let groupIndex = 0; groupIndex < groups.length; groupIndex++) {
+            if (usedGroups.has(groupIndex)) continue;
+            const group = groups[groupIndex];
+            if (group.size !== meld.length || group.size < 3 || group.suit === SUITS.FLOWERS) continue;
+            const expectedKey = getActualTileKey(group, baseVal, suitMap);
+            const matches = naturalTiles.every(tile => `${tile.suit}_${tile.val}` === expectedKey);
+            if (!matches) continue;
+            usedGroups.add(groupIndex);
+            if (assignExposure(exposureIndex + 1)) return true;
+            usedGroups.delete(groupIndex);
+        }
+        return false;
+    };
+
+    return assignExposure(0);
+}
+
 
 // Generalized Hand Matching Scoring (returns matchCount out of 14)
-export function getHandScore(groups, tiles) {
+export function getHandScore(groups, tiles, exposures = []) {
     const { freq, jokers } = getTileFrequencies(tiles);
     const numericSuits = [SUITS.DOTS, SUITS.BAMS, SUITS.CRAKES];
     
@@ -635,6 +666,7 @@ export function getHandScore(groups, tiles) {
         if (!rangeValid) continue;
 
         for (const suitMap of suitMappings) {
+            if (!exposuresFitGroups(groups, exposures, baseVal, suitMap)) continue;
             const score = evalCombinationScore(groups, freq, jokers, baseVal, suitMap);
             if (score > maxMatchCount) {
                 maxMatchCount = score;
@@ -683,12 +715,16 @@ function evalCombinationScore(reqGroups, freq, availableJokers, baseVal, suitMap
 }
 
 // Evaluate completion percentages for all card hands based on hand tiles
-export function analyzeHandStrengths(hand) {
+export function analyzeHandStrengths(hand, exposures = []) {
     const results = [];
+    const exposedTiles = exposures.flat();
+    const completeTiles = [...hand, ...exposedTiles];
     
     for (const cat in HANDS_CARD) {
         for (const item of HANDS_CARD[cat]) {
-            const matchCount = getHandScore(item.groups, hand);
+            if (exposedTiles.length > 0 && item.isConcealed) continue;
+            const matchCount = getHandScore(item.groups, completeTiles, exposures);
+            if (exposedTiles.length > 0 && matchCount === 0) continue;
             const percentage = Math.round((matchCount / 14) * 100);
             results.push({
                 id: item.id,
@@ -719,7 +755,7 @@ export function checkMahjong(hand, exposures = []) {
     for (const cat in HANDS_CARD) {
         for (const item of HANDS_CARD[cat]) {
             if (exposedTiles.length > 0 && item.isConcealed) continue;
-            if (checkGroupMatch(item.groups, completeHand)) {
+            if (checkGroupMatch(item.groups, completeHand, exposures)) {
                 return { matched: true, handInfo: item };
             }
         }
@@ -765,4 +801,17 @@ export function checkDiscardClaims(playerHand, discardTile, exposures = []) {
     }
 
     return claims;
+}
+
+// Build a legal exposed meld without ever consuming unrelated rack tiles.
+export function buildClaimMeld(playerHand, discardTile, type) {
+    const size = { pung: 3, kong: 4, quint: 5 }[type];
+    if (!size || !discardTile || discardTile.suit === SUITS.JOKERS || discardTile.suit === SUITS.FLOWERS) return null;
+    const needed = size - 1;
+    const naturals = playerHand.filter(tile => tile.suit === discardTile.suit && tile.val === discardTile.val);
+    const jokers = playerHand.filter(tile => tile.suit === SUITS.JOKERS);
+    const chosen = naturals.slice(0, needed);
+    if (chosen.length < needed) chosen.push(...jokers.slice(0, needed - chosen.length));
+    if (chosen.length !== needed) return null;
+    return { meld: [...chosen, discardTile], consumedIds: chosen.map(tile => tile.id) };
 }

@@ -1426,6 +1426,14 @@ body {
     border-radius: 2px;
 }
 
+.copilot-no-match {
+    margin: 0;
+    padding: 5px 0;
+    color: #ffb1a8;
+    font-size: 0.78rem;
+    line-height: 1.35;
+}
+
 .copilot-suggestion-card {
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.05);

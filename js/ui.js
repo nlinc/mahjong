@@ -1,4 +1,4 @@
-import { SUITS, HANDS_CARD, CARD_CATEGORIES, analyzeHandStrengths, saveCustomHand, deleteCustomHand } from './engine.js?v=7';
+import { SUITS, HANDS_CARD, CARD_CATEGORIES, analyzeHandStrengths, saveCustomHand, deleteCustomHand } from './engine.js?v=8';
 
 // DOM selectors
 export const elements = {
@@ -479,7 +479,7 @@ export function initCardReference() {
     loadCategory('consec');
 }
 
-export function renderCoPilotSuggestions(hand) {
+export function renderCoPilotSuggestions(hand, exposures = []) {
     if (!hand || hand.length === 0) return;
     if (!elements.coPilotSuggestions) {
         console.warn("Co-pilot suggestions container not found in DOM.");
@@ -487,13 +487,25 @@ export function renderCoPilotSuggestions(hand) {
     }
     
     // Analyze hand strengths
-    latestHandStrengths = analyzeHandStrengths(hand);
+    latestHandStrengths = analyzeHandStrengths(hand, exposures);
     
     // Render top 3 suggestions in the Co-pilot panel
     elements.coPilotSuggestions.innerHTML = '';
+    const header = elements.coPilotPanel.querySelector('.co-pilot-header');
+    const exposedCount = exposures.flat().length;
+    if (header) header.textContent = exposedCount
+        ? `🔒 Committed: only patterns compatible with ${exposures.length} exposed meld${exposures.length === 1 ? '' : 's'}`
+        : '💡 Mahjong Co-pilot Suggestions';
     
     // Display top 3
     const top3 = latestHandStrengths.slice(0, 3);
+    if (!top3.length) {
+        const warning = document.createElement('p');
+        warning.className = 'copilot-no-match';
+        warning.textContent = 'No card patterns are compatible with the exposed tiles. This meld may be invalid.';
+        elements.coPilotSuggestions.appendChild(warning);
+        return;
+    }
     top3.forEach(item => {
         const isHigh = item.percentage >= 50;
         const card = document.createElement('div');
