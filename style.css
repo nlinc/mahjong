@@ -1242,8 +1242,12 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 8px;
     font-size: 0.75rem;
     color: var(--text-muted);
+}
+.hand-card-row .hand-details > span:first-child {
+    min-width: 0;
 }
 .hand-card-row .expose-badge {
     background: rgba(255, 255, 255, 0.08);
@@ -1611,6 +1615,40 @@ body {
     background: rgba(16, 185, 129, 0.15);
     color: #10b981;
     border-color: rgba(16, 185, 129, 0.3);
+}
+
+.hand-badges,
+.copilot-metrics {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.difficulty-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 6px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.12);
+    color: #cbd5e1;
+    font-size: 0.64rem;
+    font-weight: 800;
+    letter-spacing: 0.025em;
+    line-height: 1.25;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.difficulty-easy { color: #6ee7b7; border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.14); }
+.difficulty-moderate { color: #fde68a; border-color: rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.14); }
+.difficulty-hard { color: #fdba74; border-color: rgba(249, 115, 22, 0.45); background: rgba(249, 115, 22, 0.15); }
+.difficulty-expert { color: #fca5a5; border-color: rgba(239, 68, 68, 0.45); background: rgba(239, 68, 68, 0.15); }
+.difficulty-extreme,
+.difficulty-impossible { color: #e9d5ff; border-color: rgba(168, 85, 247, 0.5); background: rgba(168, 85, 247, 0.16); }
+
+.copilot-metrics .copilot-pct {
+    white-space: nowrap;
 }
 
 /* Charleston Active state - pop rack in front of overlay and unblur it */

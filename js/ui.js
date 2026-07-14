@@ -1,4 +1,4 @@
-import { SUITS, HANDS_CARD, CARD_CATEGORIES, analyzeHandStrengths, saveCustomHand, deleteCustomHand } from './engine.js?v=11';
+import { SUITS, HANDS_CARD, CARD_CATEGORIES, analyzeHandStrengths, getHandDifficulty, saveCustomHand, deleteCustomHand } from './engine.js?v=12';
 
 // DOM selectors
 export const elements = {
@@ -521,13 +521,19 @@ export function initCardReference() {
             
             // Find current match percentage if available
             const strength = latestHandStrengths.find(s => s.id === h.id);
-            const pctText = strength ? `<div class="card-match-pct${strength.percentage >= 50 ? ' high' : ''}">${strength.percentage}% Match</div>` : '';
+            const pctText = strength ? `<div class="card-match-pct${strength.percentage >= 50 ? ' high' : ''}" title="${strength.matchCount} of 14 tiles collected" aria-label="${strength.matchCount} of 14 tiles collected, ${strength.percentage} percent">${strength.matchCount}/14 · ${strength.percentage}%</div>` : '';
+            const difficulty = strength?.difficulty || getHandDifficulty(h.groups, h.isConcealed);
+            const difficultyClass = difficulty.level.toLowerCase();
+            const difficultyText = `${difficulty.level}: ${difficulty.reason}`;
 
             row.innerHTML = `
                 <div class="hand-pattern" aria-label="${escapeHtml(h.display)}">${renderPatternMarkup(h)}</div>
                 <div class="hand-details">
                     <span>${escapeHtml(h.desc)}</span>
-                    <span class="expose-badge">${h.isConcealed ? 'C' : 'X'}</span>
+                    <span class="hand-badges">
+                        <span class="difficulty-badge difficulty-${difficultyClass}" title="${escapeHtml(difficultyText)}" aria-label="Difficulty ${escapeHtml(difficultyText)}">${escapeHtml(difficulty.level)}</span>
+                        <span class="expose-badge">${h.isConcealed ? 'C' : 'X'}</span>
+                    </span>
                 </div>
                 ${pctText}
             `;
@@ -608,7 +614,10 @@ export function renderCoPilotSuggestions(hand, exposures = []) {
             <div class="copilot-pattern" title="${escapeHtml(item.desc)}" aria-label="${escapeHtml(item.display)}">${renderPatternMarkup(item)}</div>
             <div class="copilot-info">
                 <span>${catText}</span>
-                <span class="copilot-pct">${item.percentage}%</span>
+                <span class="copilot-metrics">
+                    <span class="difficulty-badge difficulty-${item.difficulty.level.toLowerCase()}" title="${escapeHtml(`${item.difficulty.level}: ${item.difficulty.reason}`)}">${escapeHtml(item.difficulty.level)}</span>
+                    <span class="copilot-pct" title="${item.matchCount} of 14 tiles collected">${item.matchCount}/14 · ${item.percentage}%</span>
+                </span>
             </div>
         `;
         

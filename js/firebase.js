@@ -129,7 +129,7 @@ export async function createRoom(roomId, hostName) {
             roundResult: null,
             exposures: [[], [], [], []],
             charlestonStep: 0,
-            charlestonPasses: [[], [], [], []],
+            charlestonPasses: [null, null, null, null],
             lastActionTime: Date.now()
         }
     };

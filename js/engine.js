@@ -71,6 +71,11 @@ export function shuffle(wall) {
     return wall;
 }
 
+export function isValidCharlestonPass(pass) {
+    return Array.isArray(pass) && pass.length === 3 &&
+        new Set(pass).size === 3 && pass.every(id => Number.isInteger(id));
+}
+
 // Sorting Helpers
 export function sortHandBySuit(hand) {
     const suitOrder = [
@@ -714,6 +719,95 @@ function evalCombinationScore(reqGroups, freq, availableJokers, baseVal, suitMap
     return matchCount;
 }
 
+// Difficulty is deliberately separate from completion percentage. Percentage
+// answers "how many of the 14 required tiles do I have?"; difficulty estimates
+// how restrictive the finished pattern is before play begins.
+export function getHandDifficulty(groups, isConcealed = false) {
+    const requirements = new Map();
+    let minRelativeOffset = Infinity;
+    let maxRelativeOffset = -Infinity;
+    const suitVars = new Set();
+    let pairGroups = 0;
+    let singleGroups = 0;
+
+    for (const group of groups || []) {
+        const size = Number(group.size || 0);
+        if (group.suit === 'A' || group.suit === 'B' || group.suit === 'C') suitVars.add(group.suit);
+        if (size === 1) singleGroups++;
+        if (size === 2) pairGroups++;
+        if (group.isRelative) {
+            minRelativeOffset = Math.min(minRelativeOffset, group.relOffset);
+            maxRelativeOffset = Math.max(maxRelativeOffset, group.relOffset);
+        }
+
+        // Symbolic keys are sufficient here: changing A from Dots to Bams does
+        // not change the number of physical copies available.
+        const valueKey = group.isRelative ? `relative:${group.relOffset}` : `fixed:${group.val}`;
+        const key = `${group.suit}|${valueKey}`;
+        const current = requirements.get(key) || {
+            total: 0,
+            naturalOnly: 0,
+            available: group.suit === SUITS.FLOWERS ? 8 : 4
+        };
+        current.total += size;
+        if (size <= 2) current.naturalOnly += size;
+        requirements.set(key, current);
+    }
+
+    let minJokers = 0;
+    let impossible = false;
+    for (const requirement of requirements.values()) {
+        if (requirement.naturalOnly > requirement.available) impossible = true;
+        minJokers += Math.max(0, requirement.total - requirement.available);
+    }
+    if (minJokers > 8) impossible = true;
+
+    const suitInterpretations = suitVars.size === 0
+        ? 1
+        : [1, 3, 6, 6][suitVars.size];
+    const valueInterpretations = minRelativeOffset === Infinity
+        ? 1
+        : Math.max(0, 9 - (maxRelativeOffset - minRelativeOffset));
+    const interpretations = suitInterpretations * valueInterpretations;
+
+    let score = 15 + (minJokers * 11) + (pairGroups * 4) + (singleGroups * 3);
+    if (isConcealed) score += 18;
+    if (interpretations >= 12) score -= 8;
+    else if (interpretations >= 6) score -= 5;
+    else if (interpretations >= 3) score -= 2;
+    else score += 8;
+    score = Math.max(0, Math.round(score));
+
+    let level = 'Extreme';
+    if (impossible) level = 'Impossible';
+    else if (score <= 18) level = 'Easy';
+    else if (score <= 32) level = 'Moderate';
+    else if (score <= 46) level = 'Hard';
+    else if (score <= 60) level = 'Expert';
+
+    const reasons = [];
+    if (impossible) reasons.push('needs more physical tiles or Jokers than exist');
+    else {
+        if (minJokers) reasons.push(`needs at least ${minJokers} Joker${minJokers === 1 ? '' : 's'}`);
+        if (pairGroups || singleGroups) {
+            const exactGroups = pairGroups + singleGroups;
+            reasons.push(`${exactGroups} exact single/pair group${exactGroups === 1 ? '' : 's'} cannot use Jokers`);
+        }
+        if (isConcealed) reasons.push('must remain concealed');
+        if (interpretations >= 6) reasons.push(`${interpretations} suit/number variations add flexibility`);
+        else if (interpretations === 1) reasons.push('uses one fixed tile pattern');
+    }
+
+    return {
+        level,
+        score,
+        minJokers,
+        interpretations,
+        impossible,
+        reason: reasons.join('; ') || 'open hand with no forced Jokers'
+    };
+}
+
 // Evaluate completion percentages for all card hands based on hand tiles
 export function analyzeHandStrengths(hand, exposures = []) {
     const results = [];
@@ -723,6 +817,10 @@ export function analyzeHandStrengths(hand, exposures = []) {
     for (const cat in HANDS_CARD) {
         for (const item of HANDS_CARD[cat]) {
             if (exposedTiles.length > 0 && item.isConcealed) continue;
+            const difficulty = getHandDifficulty(item.groups, item.isConcealed);
+            // Keep impossible custom patterns visible on the card (where they
+            // are labelled), but never recommend them as a playable target.
+            if (difficulty.impossible) continue;
             const matchCount = getHandScore(item.groups, completeTiles, exposures);
             if (exposedTiles.length > 0 && matchCount === 0) continue;
             const percentage = Math.round((matchCount / 14) * 100);
@@ -733,13 +831,15 @@ export function analyzeHandStrengths(hand, exposures = []) {
                 category: cat,
                 percentage,
                 matchCount,
+                difficulty,
                 groups: item.groups
             });
         }
     }
 
-    // Sort descending by percentage
-    results.sort((a, b) => b.percentage - a.percentage);
+    // Progress is primary; when two targets have equal progress, recommend the
+    // more attainable pattern first instead of relying on card order.
+    results.sort((a, b) => b.percentage - a.percentage || a.difficulty.score - b.difficulty.score);
     return results;
 }
 

@@ -1,5 +1,5 @@
 /* Bot AI Opponent Logic */
-import { SUITS, getTileFrequencies } from './engine.js?v=11';
+import { SUITS, getTileFrequencies } from './engine.js?v=12';
 
 // Evaluate hand tiles to find the least useful tiles to discard or pass
 // Returns an array of 3 tiles to pass in the Charleston

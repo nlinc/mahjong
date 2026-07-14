@@ -2,7 +2,8 @@
 import {
     createWall, sortHandBySuit, sortHandByValue, 
     checkMahjong, SUITS, HANDS_CARD, parseCustomPattern, checkGroupMatch,
-    analyzeHandStrengths, buildClaimMeld, checkDiscardClaims, undoLastClaim
+    analyzeHandStrengths, getHandDifficulty, buildClaimMeld, checkDiscardClaims, undoLastClaim,
+    isValidCharlestonPass
 } from './js/engine.js';
 import { readFileSync } from 'node:fs';
 
@@ -38,6 +39,16 @@ try {
     assert(dots.length === 36, `Wall should contain exactly 36 Dots (got ${dots.length})`);
 } catch (e) {
     assert(false, `Wall generation failed: ${e.message}`);
+}
+
+// Charleston synchronization only treats a complete, unique 3-tile payload as submitted.
+try {
+    assert(isValidCharlestonPass([1, 2, 3]), 'A unique three-tile Charleston pass should be valid');
+    assert(!isValidCharlestonPass([]), 'An empty legacy Charleston pass must not lock the submit button');
+    assert(!isValidCharlestonPass([1, 2]), 'An incomplete Charleston pass must remain retryable');
+    assert(!isValidCharlestonPass([1, 1, 2]), 'A Charleston pass cannot contain duplicate tile IDs');
+} catch (e) {
+    assert(false, `Charleston pass validation failed: ${e.message}`);
 }
 
 // 2. Hand Matching Tests - Consec 1 (FFFF 11111 22222)
@@ -109,11 +120,33 @@ try {
     const strengths = analyzeHandStrengths(testHand);
     assert(strengths.length > 0, "Should generate strength recommendations");
     assert(strengths[0].percentage > 0, `Top match should be >0% (got ${strengths[0].percentage}%)`);
+    assert(strengths[0].percentage === Math.round((strengths[0].matchCount / 14) * 100), 'Collected percentage should always be matched tiles divided by 14');
+    assert(strengths[0].difficulty?.level, 'Every hand recommendation should include a difficulty level');
     passCount++;
     console.log(`✅ PASS: Hand Analyzer test (top match: ${strengths[0].percentage}%)`);
 
 } catch (e) {
     assert(false, `Singles & Pairs tests failed: ${e.message}`);
+}
+
+// 3b. Structural difficulty is independent of current collection progress.
+try {
+    const flexibleRun = getHandDifficulty(HANDS_CARD.consec.find(hand => hand.id === 'consec_5').groups, false);
+    const concealedPairsHand = HANDS_CARD.winds.find(hand => hand.id === 'winds_8');
+    const concealedPairs = getHandDifficulty(concealedPairsHand.groups, concealedPairsHand.isConcealed);
+    const jokerHeavyHand = HANDS_CARD.quints.find(hand => hand.id === 'quints_2');
+    const jokerHeavy = getHandDifficulty(jokerHeavyHand.groups, jokerHeavyHand.isConcealed);
+    const impossible = getHandDifficulty([
+        { size: 2, suit: 'A', val: 1, isRelative: false },
+        { size: 2, suit: 'A', val: 1, isRelative: false },
+        { size: 2, suit: 'A', val: 1, isRelative: false }
+    ], true);
+    assert(flexibleRun.level === 'Easy', `Flexible consecutive run should be Easy (got ${flexibleRun.level})`);
+    assert(concealedPairs.level === 'Extreme', `Fixed concealed pairs should be Extreme (got ${concealedPairs.level})`);
+    assert(jokerHeavy.minJokers === 4 && ['Expert', 'Extreme'].includes(jokerHeavy.level), `Two Sextets should require four Jokers and be Expert+ (got ${jokerHeavy.minJokers}, ${jokerHeavy.level})`);
+    assert(impossible.level === 'Impossible', `A pattern requiring six natural copies in pairs should be Impossible (got ${impossible.level})`);
+} catch (e) {
+    assert(false, `Difficulty analysis failed: ${e.message}`);
 }
 
 // 4. Exposed-hand validation

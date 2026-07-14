@@ -1,18 +1,18 @@
 /* Main application coordinator. Game state is canonical and shared by solo and multiplayer. */
 import {
     createWall, shuffle, sortHandBySuit, sortHandByValue,
-    checkDiscardClaims, checkMahjong, buildClaimMeld, undoLastClaim, SUITS
-} from './engine.js?v=11';
-import { botSelectCharlestonPass, botSelectDiscard, botDecideClaim } from './bot.js?v=11';
+    checkDiscardClaims, checkMahjong, buildClaimMeld, undoLastClaim, isValidCharlestonPass, SUITS
+} from './engine.js?v=12';
+import { botSelectCharlestonPass, botSelectDiscard, botDecideClaim } from './bot.js?v=12';
 import {
     elements, switchScreen, toggleOverlay, showToast, renderPlayerRack,
     renderDiscardRiver, renderOpponentSeat, renderMyExposures, renderClaimPrompt,
     renderCharlestonStep, setupMenuOverlay, setupGuideOverlay, setupCardOverlay,
     getTileChar, renderCoPilotSuggestions, renderRoundResult, showCardPattern
-} from './ui.js?v=15';
+} from './ui.js?v=16';
 import {
     createRoom, joinRoom, subscribeToRoom, updateRoom, mutateRoom, leaveRoom, initFirebase
-} from './firebase.js?v=8';
+} from './firebase.js?v=9';
 
 const appState = {
     mode: 'solo',
@@ -38,6 +38,7 @@ const appState = {
 };
 
 let myCharlestonSelections = [];
+let charlestonPassPending = false;
 let botTimer = null;
 let drawingRoomTile = false;
 
@@ -242,6 +243,7 @@ function sortMyHand(sorter) {
 
 function handleTileSelect(tileId) {
     if (appState.gamePhase === 'charleston') {
+        if (charlestonPassPending || isValidCharlestonPass(appState.charlestonPasses?.[appState.playerIndex])) return;
         const tile = myHand().find(item => item.id === tileId);
         if (!tile) return;
         if (tile.suit === SUITS.JOKERS) return showToast('Jokers cannot be passed in the Charleston.');
@@ -269,7 +271,7 @@ function handleTileDoubleClick(tileId) {
 function renderCharleston() {
     document.body.classList.add('charleston-active');
     toggleOverlay(elements.charlestonOverlay, true);
-    const alreadySubmitted = Boolean(appState.charlestonPasses?.[appState.playerIndex]);
+    const alreadySubmitted = isValidCharlestonPass(appState.charlestonPasses?.[appState.playerIndex]);
     renderCharlestonStep(
         appState.charlestonStep,
         myCharlestonSelections,
@@ -279,8 +281,10 @@ function renderCharleston() {
         },
         handleConfirmCharlestonPass
     );
-    elements.btnCharlestonConfirm.disabled = alreadySubmitted || myCharlestonSelections.length !== 3;
-    elements.btnCharlestonConfirm.textContent = alreadySubmitted ? 'Waiting for players…' : 'Confirm Pass';
+    elements.btnCharlestonConfirm.disabled = charlestonPassPending || alreadySubmitted || myCharlestonSelections.length !== 3;
+    elements.btnCharlestonConfirm.textContent = charlestonPassPending
+        ? 'Submitting…'
+        : alreadySubmitted ? 'Waiting for players…' : 'Confirm Pass';
     elements.btnCharlestonStop.classList.toggle('hidden', appState.charlestonStep !== 3);
     elements.btnCharlestonStop.textContent = 'Skip Optional Second Charleston';
     updateRackUI();
@@ -292,6 +296,9 @@ function passSourceFor(seat, step) {
 }
 
 function resolveCharlestonPasses(state) {
+    if (!Array.isArray(state.charlestonPasses) || !state.charlestonPasses.every(isValidCharlestonPass)) {
+        throw new Error('All players must submit exactly 3 tiles before the pass can resolve.');
+    }
     const passes = state.charlestonPasses.map((ids, seat) => ids.map(id => state.hands[seat].find(tile => tile.id === id)));
     if (passes.some(pass => pass.some(tile => !tile || tile.suit === SUITS.JOKERS))) throw new Error('Invalid Charleston pass.');
     for (let seat = 0; seat < 4; seat++) {
@@ -305,11 +312,11 @@ function resolveCharlestonPasses(state) {
 }
 
 async function handleConfirmCharlestonPass() {
-    if (myCharlestonSelections.length !== 3) return;
+    if (charlestonPassPending || myCharlestonSelections.length !== 3) return;
     const selectedIds = myCharlestonSelections.map(tile => tile.id);
-    myCharlestonSelections = [];
 
     if (appState.mode === 'solo') {
+        myCharlestonSelections = [];
         appState.charlestonPasses[0] = selectedIds;
         for (let seat = 1; seat < 4; seat++) appState.charlestonPasses[seat] = botSelectCharlestonPass(appState.hands[seat]).map(tile => tile.id);
         resolveCharlestonPasses(appState);
@@ -318,19 +325,29 @@ async function handleConfirmCharlestonPass() {
         return;
     }
 
+    const submittedStep = appState.charlestonStep;
+    charlestonPassPending = true;
+    renderCharleston();
     try {
-        await mutateRoom(appState.roomId, room => {
+        const updatedRoom = await mutateRoom(appState.roomId, room => {
             if (room.status !== 'charleston') return room;
             const state = room.gameState;
-            state.charlestonPasses ||= [null, null, null, null];
-            if (state.charlestonPasses[appState.playerIndex]) return room;
+            if (state.charlestonStep !== submittedStep) return room;
+            state.charlestonPasses = [0, 1, 2, 3].map(seat =>
+                isValidCharlestonPass(state.charlestonPasses?.[seat]) ? state.charlestonPasses[seat] : null
+            );
+            if (isValidCharlestonPass(state.charlestonPasses[appState.playerIndex])) return room;
+            const selectedTiles = selectedIds.map(id => state.hands[appState.playerIndex].find(tile => tile.id === id));
+            if (selectedTiles.some(tile => !tile) || selectedTiles.some(tile => tile.suit === SUITS.JOKERS)) {
+                throw new Error('Those tiles are no longer available to pass. Select 3 tiles again.');
+            }
             state.charlestonPasses[appState.playerIndex] = selectedIds;
             room.players.forEach((player, seat) => {
-                if (player.isBot && !state.charlestonPasses[seat]) {
+                if (player.isBot && !isValidCharlestonPass(state.charlestonPasses[seat])) {
                     state.charlestonPasses[seat] = botSelectCharlestonPass(state.hands[seat]).map(tile => tile.id);
                 }
             });
-            if (state.charlestonPasses.every(Boolean)) {
+            if (state.charlestonPasses.every(isValidCharlestonPass)) {
                 resolveCharlestonPasses(state);
                 if (state.charlestonStep >= 6) {
                     room.status = 'playing';
@@ -339,9 +356,19 @@ async function handleConfirmCharlestonPass() {
             }
             return room;
         });
+        const finalState = updatedRoom.gameState;
+        const passWasAccepted = updatedRoom.status !== 'charleston' ||
+            finalState.charlestonStep > submittedStep ||
+            (finalState.charlestonStep === submittedStep &&
+                isValidCharlestonPass(finalState.charlestonPasses?.[appState.playerIndex]) &&
+                finalState.charlestonPasses[appState.playerIndex].every(id => selectedIds.includes(id)));
+        if (!passWasAccepted) throw new Error('The pass did not reach the room. Please try again.');
+        myCharlestonSelections = [];
     } catch (error) {
-        myCharlestonSelections = selectedIds.map(id => myHand().find(tile => tile.id === id)).filter(Boolean);
         showToast(error.message || 'Could not submit pass.');
+    } finally {
+        charlestonPassPending = false;
+        if (appState.gamePhase === 'charleston') renderCharleston();
     }
 }
 
@@ -726,6 +753,10 @@ function handleRoomStateUpdate(room) {
     renderLobby(room);
     if (!['charleston', 'playing', 'ended'].includes(room.status)) return;
     const state = room.gameState;
+    const previousCharlestonStep = appState.charlestonStep;
+    const normalizedPasses = [0, 1, 2, 3].map(seat =>
+        isValidCharlestonPass(state.charlestonPasses?.[seat]) ? state.charlestonPasses[seat] : null
+    );
     Object.assign(appState, {
         wall: state.wall || [],
         hands: state.hands || [[], [], [], []],
@@ -738,10 +769,10 @@ function handleRoomStateUpdate(room) {
         winnerMessage: state.winnerMessage || null,
         roundResult: state.roundResult || null,
         charlestonStep: state.charlestonStep || 0,
-        charlestonPasses: state.charlestonPasses || [null, null, null, null],
+        charlestonPasses: normalizedPasses,
         gamePhase: room.status === 'ended' ? 'gameover' : room.status
     });
-    if (appState.gamePhase !== 'charleston') myCharlestonSelections = [];
+    if (appState.gamePhase !== 'charleston' || appState.charlestonStep !== previousCharlestonStep) myCharlestonSelections = [];
     switchScreen(elements.gameScreen);
     renderGame();
     if (room.status === 'ended' && state.winnerMessage) showToast(state.winnerMessage);
