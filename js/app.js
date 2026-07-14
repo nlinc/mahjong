@@ -1,18 +1,18 @@
 /* Main application coordinator. Game state is canonical and shared by solo and multiplayer. */
 import {
     createWall, shuffle, sortHandBySuit, sortHandByValue,
-    checkDiscardClaims, checkMahjong, buildClaimMeld, SUITS
-} from './engine.js?v=8';
-import { botSelectCharlestonPass, botSelectDiscard, botDecideClaim } from './bot.js?v=8';
+    checkDiscardClaims, checkMahjong, buildClaimMeld, undoLastClaim, SUITS
+} from './engine.js?v=9';
+import { botSelectCharlestonPass, botSelectDiscard, botDecideClaim } from './bot.js?v=9';
 import {
     elements, switchScreen, toggleOverlay, showToast, renderPlayerRack,
     renderDiscardRiver, renderOpponentSeat, renderMyExposures, renderClaimPrompt,
     renderCharlestonStep, setupMenuOverlay, setupGuideOverlay, setupCardOverlay,
     getTileChar, renderCoPilotSuggestions
-} from './ui.js?v=12';
+} from './ui.js?v=13';
 import {
     createRoom, joinRoom, subscribeToRoom, updateRoom, mutateRoom, leaveRoom, initFirebase
-} from './firebase.js?v=6';
+} from './firebase.js?v=7';
 
 const appState = {
     mode: 'solo',
@@ -27,6 +27,7 @@ const appState = {
     currentTurn: 0,
     activeDiscard: null,
     claimWindow: null,
+    lastClaimUndo: null,
     gamePhase: 'setup',
     charlestonStep: 0,
     charlestonPasses: [null, null, null, null],
@@ -80,6 +81,7 @@ function setupUIEvents() {
     elements.btnSortValue.addEventListener('click', () => sortMyHand(sortHandByValue));
     elements.btnToggleCopilot.addEventListener('click', toggleCoPilot);
     elements.btnRackDiscard.addEventListener('click', handleManualDiscard);
+    elements.btnUndoClaim.addEventListener('click', handleUndoClaim);
     elements.btnDeclareMahjong.addEventListener('click', handleDeclareMahjong);
     elements.btnCharlestonStop.addEventListener('click', finishCharlestonEarly);
 
@@ -135,6 +137,7 @@ function createFreshGameState() {
         currentTurn: 0,
         activeDiscard: null,
         claimWindow: null,
+        lastClaimUndo: null,
         charlestonStep: 0,
         charlestonPasses: [null, null, null, null],
         selectedTileId: null
@@ -368,6 +371,8 @@ function updateActionButtons() {
     elements.btnRackDiscard.disabled = !canAct || appState.selectedTileId == null || effectiveCount(appState, appState.playerIndex) !== 14;
     const canDeclare = canAct && effectiveCount(appState, appState.playerIndex) === 14;
     elements.btnDeclareMahjong.classList.toggle('hidden', !canDeclare);
+    const canUndo = canAct && appState.lastClaimUndo?.seat === appState.playerIndex;
+    elements.btnUndoClaim.classList.toggle('hidden', !canUndo);
 }
 
 async function requestDraw() {
@@ -420,6 +425,7 @@ async function handleManualDiscard() {
 function applyDiscard(state, seat, tileId, players) {
     const index = state.hands[seat].findIndex(tile => tile.id === tileId);
     if (index < 0 || effectiveCount(state, seat) !== 14) return false;
+    state.lastClaimUndo = null;
     const tile = state.hands[seat].splice(index, 1)[0];
     state.discards.push(tile);
     state.activeDiscard = tile;
@@ -491,12 +497,41 @@ function executeClaim(state, seat, type, tile, players) {
         return;
     }
     state.discards.pop();
+    const priorClaimWindow = structuredClone(state.claimWindow);
     const chosenIds = new Set(claim.consumedIds);
     state.hands[seat] = hand.filter(candidate => !chosenIds.has(candidate.id));
     state.exposures[seat].push(claim.meld);
+    state.lastClaimUndo = {
+        seat,
+        type,
+        claimedTile: tile,
+        consumedTiles: claim.meld.slice(0, -1),
+        meldIds: claim.meld.map(candidate => candidate.id),
+        exposureIndex: state.exposures[seat].length - 1,
+        priorClaimWindow
+    };
     state.currentTurn = seat;
     state.claimWindow = null;
     state.activeDiscard = null;
+}
+
+async function handleUndoClaim() {
+    const seat = appState.playerIndex;
+    if (appState.mode === 'solo') {
+        if (!undoLastClaim(appState, seat)) return;
+        appState.hands[seat] = sortHandBySuit(appState.hands[seat]);
+        resolveClaimWindow(appState, appState.players);
+        showToast('Call undone. You passed on that discard.');
+        renderGame();
+        return;
+    }
+    await mutateRoom(appState.roomId, room => {
+        if (!undoLastClaim(room.gameState, seat)) return room;
+        room.gameState.hands[seat] = sortHandBySuit(room.gameState.hands[seat]);
+        resolveClaimWindow(room.gameState, room.players);
+        return room;
+    });
+    showToast('Call undone. You passed on that discard.');
 }
 
 async function submitClaimResponse(type) {
@@ -644,6 +679,7 @@ function handleRoomStateUpdate(room) {
         currentTurn: state.currentTurn || 0,
         activeDiscard: state.activeDiscard || null,
         claimWindow: state.claimWindow || null,
+        lastClaimUndo: state.lastClaimUndo || null,
         charlestonStep: state.charlestonStep || 0,
         charlestonPasses: state.charlestonPasses || [null, null, null, null],
         gamePhase: room.status === 'ended' ? 'gameover' : room.status

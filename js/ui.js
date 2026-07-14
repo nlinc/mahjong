@@ -1,4 +1,4 @@
-import { SUITS, HANDS_CARD, CARD_CATEGORIES, analyzeHandStrengths, saveCustomHand, deleteCustomHand } from './engine.js?v=8';
+import { SUITS, HANDS_CARD, CARD_CATEGORIES, analyzeHandStrengths, saveCustomHand, deleteCustomHand } from './engine.js?v=9';
 
 // DOM selectors
 export const elements = {
@@ -22,6 +22,7 @@ export const elements = {
     btnSortSuit: document.getElementById('btn-sort-suit'),
     btnSortValue: document.getElementById('btn-sort-value'),
     btnRackDiscard: document.getElementById('btn-rack-discard'),
+    btnUndoClaim: document.getElementById('btn-undo-claim'),
     btnDeclareMahjong: document.getElementById('btn-declare-mahjong'),
     btnRestartGame: document.getElementById('btn-restart-game'),
     btnLeaveGame: document.getElementById('btn-leave-game'),

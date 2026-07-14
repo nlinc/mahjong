@@ -15,7 +15,7 @@ service cloud.firestore {
             'wall', 'hands', 'exposures', 'discards', 'currentTurn',
             'activeDiscard', 'claimPrompt', 'claimWindow', 'charlestonStep',
             'charlestonPasses', 'selectedTileId', 'gamePhase', 'winnerMessage',
-            'lastActionTime'
+            'lastActionTime', 'lastClaimUndo'
           ])
           && data.gameState.discards is list
           && data.gameState.discards.size() <= 152

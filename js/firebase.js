@@ -124,6 +124,7 @@ export async function createRoom(roomId, hostName) {
             currentTurn: 0,
             activeDiscard: null,
             claimPrompt: null,
+            lastClaimUndo: null,
             exposures: [[], [], [], []],
             charlestonStep: 0,
             charlestonPasses: [[], [], [], []],

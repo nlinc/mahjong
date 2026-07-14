@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>American Mahjong PWA</title>
-    <link rel="stylesheet" href="style.css?v=15">
+    <link rel="stylesheet" href="style.css?v=16">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -218,6 +218,7 @@
                             <span class="turn-prompt-text" id="turn-instruction">Waiting for dealing to complete...</span>
                         </div>
                         <div class="controls-right">
+                            <button id="btn-undo-claim" class="btn btn-sm btn-outline btn-undo hidden">↶ Undo Call</button>
                             <button id="btn-declare-mahjong" class="btn btn-sm btn-primary btn-glow hidden">Mahjong!</button>
                             <button id="btn-rack-discard" class="btn btn-sm btn-accent" disabled>Discard Selected</button>
                         </div>
@@ -354,6 +355,6 @@
     </div>
 
     <!-- Scripts -->
-    <script type="module" src="js/app.js?v=13"></script>
+    <script type="module" src="js/app.js?v=14"></script>
 </body>
 </html>

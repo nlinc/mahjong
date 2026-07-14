@@ -1438,6 +1438,11 @@ body {
     line-height: 1.35;
 }
 
+.btn-undo {
+    color: #ffd48a;
+    border-color: rgba(245, 158, 11, 0.55);
+}
+
 .copilot-suggestion-card {
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.05);

@@ -2,7 +2,7 @@
 import {
     createWall, sortHandBySuit, sortHandByValue, 
     checkMahjong, SUITS, HANDS_CARD, parseCustomPattern, checkGroupMatch,
-    analyzeHandStrengths, buildClaimMeld
+    analyzeHandStrengths, buildClaimMeld, checkDiscardClaims, undoLastClaim
 } from './js/engine.js';
 import { readFileSync } from 'node:fs';
 
@@ -142,6 +142,44 @@ try {
     const builtClaim = buildClaimMeld(claimRack, claimedSouth, 'pung');
     assert(builtClaim?.meld.every(tile => tile.suit === SUITS.WINDS || tile.suit === SUITS.JOKERS), 'Claim construction must consume only matching tiles or Jokers');
     assert(!builtClaim?.consumedIds.includes(41), 'Claim construction must never consume an unrelated Flower');
+
+    const redExposure = [[
+        { id: 50, suit: SUITS.DRAGONS, val: 'R' },
+        { id: 51, suit: SUITS.DRAGONS, val: 'R' },
+        { id: 52, suit: SUITS.DRAGONS, val: 'R' }
+    ]];
+    const doomedRack = [
+        { id: 53, suit: SUITS.BAMS, val: 3 },
+        { id: 54, suit: SUITS.JOKERS, val: 'J' }
+    ];
+    const threeBamDiscard = { id: 55, suit: SUITS.BAMS, val: 3 };
+    assert(!checkDiscardClaims(doomedRack, threeBamDiscard, redExposure).includes('pung'), 'A call that eliminates every card pattern must not be offered');
+    const northRack = [
+        { id: 56, suit: SUITS.WINDS, val: 'N' },
+        { id: 57, suit: SUITS.WINDS, val: 'N' }
+    ];
+    assert(checkDiscardClaims(northRack, { id: 58, suit: SUITS.WINDS, val: 'N' }).includes('pung'), 'A call compatible with card patterns should remain available');
+
+    const undoWindow = { tile: threeBamDiscard, discarder: 2, eligible: { '0': ['pung'] }, responses: { '0': 'pung' } };
+    const undoState = {
+        hands: [[], [], [], []],
+        exposures: [[builtClaim.meld], [], [], []],
+        discards: [],
+        currentTurn: 0,
+        activeDiscard: null,
+        claimWindow: null,
+        lastClaimUndo: {
+            seat: 0,
+            claimedTile: claimedSouth,
+            consumedTiles: builtClaim.meld.slice(0, -1),
+            meldIds: builtClaim.meld.map(tile => tile.id),
+            exposureIndex: 0,
+            priorClaimWindow: undoWindow
+        }
+    };
+    assert(undoLastClaim(undoState, 0), 'The most recent call should be undoable before a discard');
+    assert(undoState.exposures[0].length === 0 && undoState.hands[0].length === 2, 'Undo should return consumed rack tiles and remove the exposure');
+    assert(undoState.claimWindow.responses['0'] === 'pass', 'Undo should restore the claim window as a pass');
 
     const concealedPattern = [
         { id: 20, suit: SUITS.FLOWERS, val: 'F' }, { id: 21, suit: SUITS.FLOWERS, val: 'F' },

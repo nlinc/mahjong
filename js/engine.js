@@ -787,15 +787,15 @@ export function checkDiscardClaims(playerHand, discardTile, exposures = []) {
     // Jokers cannot match jokers/flowers in this standard call check
     if (discardTile.suit !== SUITS.JOKERS && discardTile.suit !== SUITS.FLOWERS) {
         // Pung requires 2 matching tiles (natural + jokers >= 2)
-        if (naturalCount + jokers >= 2) {
+        if (naturalCount + jokers >= 2 && claimPreservesCardOptions(playerHand, discardTile, 'pung', exposures)) {
             claims.push('pung');
         }
         // Kong requires 3 matching tiles
-        if (naturalCount + jokers >= 3) {
+        if (naturalCount + jokers >= 3 && claimPreservesCardOptions(playerHand, discardTile, 'kong', exposures)) {
             claims.push('kong');
         }
         // Quint requires 4 matching tiles
-        if (naturalCount + jokers >= 4) {
+        if (naturalCount + jokers >= 4 && claimPreservesCardOptions(playerHand, discardTile, 'quint', exposures)) {
             claims.push('quint');
         }
     }
@@ -814,4 +814,28 @@ export function buildClaimMeld(playerHand, discardTile, type) {
     if (chosen.length < needed) chosen.push(...jokers.slice(0, needed - chosen.length));
     if (chosen.length !== needed) return null;
     return { meld: [...chosen, discardTile], consumedIds: chosen.map(tile => tile.id) };
+}
+
+function claimPreservesCardOptions(playerHand, discardTile, type, exposures) {
+    const claim = buildClaimMeld(playerHand, discardTile, type);
+    if (!claim) return false;
+    return analyzeHandStrengths([], [...(exposures || []), claim.meld]).length > 0;
+}
+
+// Restore the state immediately before a call. The caller resolves the restored
+// claim window after marking this player as having passed.
+export function undoLastClaim(state, seat) {
+    const undo = state?.lastClaimUndo;
+    if (!undo || undo.seat !== seat || state.currentTurn !== seat || state.claimWindow) return false;
+    const exposure = state.exposures?.[seat]?.[undo.exposureIndex];
+    if (!exposure || exposure.map(tile => tile.id).join(',') !== undo.meldIds.join(',')) return false;
+
+    state.exposures[seat].splice(undo.exposureIndex, 1);
+    state.hands[seat].push(...undo.consumedTiles);
+    state.discards.push(undo.claimedTile);
+    state.activeDiscard = undo.claimedTile;
+    state.claimWindow = undo.priorClaimWindow;
+    if (state.claimWindow?.responses) state.claimWindow.responses[String(seat)] = 'pass';
+    state.lastClaimUndo = null;
+    return true;
 }
