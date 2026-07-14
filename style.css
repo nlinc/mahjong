@@ -35,6 +35,12 @@
     --color-dragons-w: #2563eb;
     --color-flowers: #6d28d9;
     --color-jokers: #d97706;
+
+    /* Card ink colors indicate relative suits, never fixed Dot/Bam/Crak suits. */
+    --pattern-suit-a: #ff7272;
+    --pattern-suit-b: #67a9ff;
+    --pattern-suit-c: #55d99f;
+    --pattern-honor: #f3f4f6;
 }
 
 * {
@@ -1206,6 +1212,32 @@ body {
     letter-spacing: 1px;
     color: var(--text-main);
 }
+
+.pattern-group {
+    display: inline-block;
+    line-height: 1.25;
+    border-bottom-width: 2px;
+    border-bottom-color: currentColor;
+}
+.pattern-suit-a { color: var(--pattern-suit-a); border-bottom-style: solid; }
+.pattern-suit-b { color: var(--pattern-suit-b); border-bottom-style: dashed; }
+.pattern-suit-c { color: var(--pattern-suit-c); border-bottom-style: dotted; }
+.pattern-suit-honor { color: var(--pattern-honor); border-bottom-style: none; }
+.pattern-gap { display: inline-block; width: 0.38em; }
+.pattern-key {
+    display: inline-block;
+    font-weight: 700;
+    font-size: 0.68rem;
+    line-height: 1.2;
+    padding-bottom: 1px;
+    border-bottom-width: 2px;
+}
+.card-footer-legend {
+    padding: 9px 10px;
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    line-height: 1.45;
+}
 .hand-card-row .hand-details {
     display: flex;
     justify-content: space-between;
@@ -1466,6 +1498,14 @@ body {
     text-transform: uppercase;
     letter-spacing: 0.5px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.co-pilot-color-key {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 12px 2px;
+    background: rgba(0,0,0,0.12);
 }
 
 .co-pilot-suggestions {

@@ -1,4 +1,4 @@
-import { SUITS, HANDS_CARD, CARD_CATEGORIES, analyzeHandStrengths, saveCustomHand, deleteCustomHand } from './engine.js?v=10';
+import { SUITS, HANDS_CARD, CARD_CATEGORIES, analyzeHandStrengths, saveCustomHand, deleteCustomHand } from './engine.js?v=11';
 
 // DOM selectors
 export const elements = {
@@ -435,6 +435,21 @@ function escapeHtml(value) {
     })[char]);
 }
 
+function renderPatternMarkup(hand) {
+    if (!hand?.groups?.length) return escapeHtml(hand?.display || '');
+    const compact = String(hand.display || '').replace(/\s+/g, '');
+    const expectedLength = hand.groups.reduce((sum, group) => sum + group.size, 0);
+    if (compact.length !== expectedLength) return escapeHtml(hand.display);
+    let offset = 0;
+    return hand.groups.map(group => {
+        const label = compact.slice(offset, offset + group.size);
+        offset += group.size;
+        const suitKey = ['A', 'B', 'C'].includes(group.suit) ? group.suit.toLowerCase() : 'honor';
+        const meaning = suitKey === 'honor' ? 'Suitless or named tile' : `Suit ${group.suit}`;
+        return `<span class="pattern-group pattern-suit-${suitKey}" title="${meaning}">${escapeHtml(label)}</span>`;
+    }).join('<span class="pattern-gap" aria-hidden="true"> </span>');
+}
+
 // Setup Card Catalog viewer
 export function initCardReference() {
     const tabs = document.querySelectorAll('.card-viewer-modal .tab-btn');
@@ -509,7 +524,7 @@ export function initCardReference() {
             const pctText = strength ? `<div class="card-match-pct${strength.percentage >= 50 ? ' high' : ''}">${strength.percentage}% Match</div>` : '';
 
             row.innerHTML = `
-                <div class="hand-pattern">${escapeHtml(h.display)}</div>
+                <div class="hand-pattern" aria-label="${escapeHtml(h.display)}">${renderPatternMarkup(h)}</div>
                 <div class="hand-details">
                     <span>${escapeHtml(h.desc)}</span>
                     <span class="expose-badge">${h.isConcealed ? 'C' : 'X'}</span>
@@ -590,7 +605,7 @@ export function renderCoPilotSuggestions(hand, exposures = []) {
         if (catText.startsWith('NUM ')) catText = catText.replace('NUM ', '');
 
         card.innerHTML = `
-            <div class="copilot-pattern" title="${item.desc}">${item.display}</div>
+            <div class="copilot-pattern" title="${escapeHtml(item.desc)}" aria-label="${escapeHtml(item.display)}">${renderPatternMarkup(item)}</div>
             <div class="copilot-info">
                 <span>${catText}</span>
                 <span class="copilot-pct">${item.percentage}%</span>

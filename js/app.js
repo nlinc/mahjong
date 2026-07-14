@@ -2,14 +2,14 @@
 import {
     createWall, shuffle, sortHandBySuit, sortHandByValue,
     checkDiscardClaims, checkMahjong, buildClaimMeld, undoLastClaim, SUITS
-} from './engine.js?v=10';
-import { botSelectCharlestonPass, botSelectDiscard, botDecideClaim } from './bot.js?v=10';
+} from './engine.js?v=11';
+import { botSelectCharlestonPass, botSelectDiscard, botDecideClaim } from './bot.js?v=11';
 import {
     elements, switchScreen, toggleOverlay, showToast, renderPlayerRack,
     renderDiscardRiver, renderOpponentSeat, renderMyExposures, renderClaimPrompt,
     renderCharlestonStep, setupMenuOverlay, setupGuideOverlay, setupCardOverlay,
     getTileChar, renderCoPilotSuggestions, renderRoundResult, showCardPattern
-} from './ui.js?v=14';
+} from './ui.js?v=15';
 import {
     createRoom, joinRoom, subscribeToRoom, updateRoom, mutateRoom, leaveRoom, initFirebase
 } from './firebase.js?v=8';

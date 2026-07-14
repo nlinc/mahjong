@@ -253,7 +253,7 @@ export const HANDS_CARD = {
         },
         {
             id: 'winds_2',
-            display: 'EEE WWW DD DD 111 111',
+            display: 'EEE WWW RR 111 111',
             desc: 'Pung East, Pung West, pair of matching Dragons, two matching Pungs of numbers.',
             isConcealed: false,
             groups: [
@@ -732,7 +732,8 @@ export function analyzeHandStrengths(hand, exposures = []) {
                 desc: item.desc,
                 category: cat,
                 percentage,
-                matchCount
+                matchCount,
+                groups: item.groups
             });
         }
     }

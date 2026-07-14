@@ -210,6 +210,7 @@ try {
     const missingRegistryNames = [...usedElementNames].filter(name => !registryNames.has(name));
     assert(missingRegistryNames.length === 0, `Every app element reference must be registered${missingRegistryNames.length ? `: ${missingRegistryNames.join(', ')}` : ''}`);
     assert(!css.includes('.claim-tile-announcement span'), 'Claim prompt styles must not override nested tile labels');
+    assert(html.includes('co-pilot-color-key') && css.includes('--pattern-suit-a'), 'Co-pilot and card reference must include the relative-suit color key');
 } catch (e) {
     assert(false, `DOM contract checks failed: ${e.message}`);
 }
@@ -225,6 +226,8 @@ try {
         hand.groups.reduce((sum, group) => sum + Number(group.size || 0), 0) !== 14
     );
     assert(malformed.length === 0, `Every practice pattern must define exactly 14 tiles${malformed.length ? `: ${malformed.map(hand => hand.id).join(', ')}` : ''}`);
+    const malformedDisplays = practiceHands.filter(hand => hand.display.replace(/\s+/g, '').length !== 14);
+    assert(malformedDisplays.length === 0, `Every displayed pattern must show exactly 14 tile symbols${malformedDisplays.length ? `: ${malformedDisplays.map(hand => hand.id).join(', ')}` : ''}`);
 
     const customGroups = parseCustomPattern('FF 1111A 2222B 3333C');
     assert(customGroups.reduce((sum, group) => sum + group.size, 0) === 14, 'Custom notation should parse a complete 14-tile hand');

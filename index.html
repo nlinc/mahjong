@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>American Mahjong PWA</title>
-    <link rel="stylesheet" href="style.css?v=17">
+    <link rel="stylesheet" href="style.css?v=18">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -195,6 +195,12 @@
                         <div class="co-pilot-header">
                             <span>💡 Mahjong Co-pilot Suggestions</span>
                         </div>
+                        <div class="co-pilot-color-key" aria-label="Pattern color key">
+                            <span class="pattern-key pattern-suit-a">Suit A</span>
+                            <span class="pattern-key pattern-suit-b">Suit B</span>
+                            <span class="pattern-key pattern-suit-c">Suit C</span>
+                            <span class="pattern-key pattern-suit-honor">Suitless</span>
+                        </div>
                         <div class="co-pilot-suggestions" id="co-pilot-suggestions">
                             <!-- Suggestions injected dynamically -->
                         </div>
@@ -293,7 +299,11 @@
                     <!-- Hands injected dynamically by category selection -->
                 </div>
                 <div class="card-footer-legend glass-dark">
-                    <p><strong>Legend:</strong> <strong>C</strong> = Concealed. <strong>X</strong> = Exposeable. A/B/C mean different numbered suits. <strong>F</strong> = Flower. Custom hands stay on this device.</p>
+                    <p><strong>Colors show suit relationships—not fixed suits:</strong>
+                        <span class="pattern-key pattern-suit-a">Suit A</span>
+                        <span class="pattern-key pattern-suit-b">Suit B</span>
+                        <span class="pattern-key pattern-suit-c">Suit C</span>.
+                        Same color = same suit; different colors = different suits. <span class="pattern-key pattern-suit-honor">Flowers/Winds</span> are suitless. <strong>C</strong> = Concealed; <strong>X</strong> = Exposeable.</p>
                 </div>
             </div>
         </div>
@@ -375,6 +385,6 @@
     </div>
 
     <!-- Scripts -->
-    <script type="module" src="js/app.js?v=15"></script>
+    <script type="module" src="js/app.js?v=16"></script>
 </body>
 </html>
