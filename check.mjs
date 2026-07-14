@@ -66,6 +66,7 @@ try {
 
     const resA = checkMahjong(handA);
     assert(resA.matched === true, `Hand A (natural + jokers) should match Consec 1 (got: ${resA.matched})`);
+    assert(resA.handInfo?.category === 'consec', 'Winning result should identify the matched card category');
 
     // Hand B: Invalid tile count (13 tiles)
     const handB = handA.slice(0, 13);

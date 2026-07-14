@@ -1,4 +1,4 @@
-import { SUITS, HANDS_CARD, CARD_CATEGORIES, analyzeHandStrengths, saveCustomHand, deleteCustomHand } from './engine.js?v=9';
+import { SUITS, HANDS_CARD, CARD_CATEGORIES, analyzeHandStrengths, saveCustomHand, deleteCustomHand } from './engine.js?v=10';
 
 // DOM selectors
 export const elements = {
@@ -50,6 +50,7 @@ export const elements = {
     cardOverlay: document.getElementById('card-overlay'),
     guideOverlay: document.getElementById('guide-overlay'),
     menuOverlay: document.getElementById('menu-overlay'),
+    roundResultOverlay: document.getElementById('round-result-overlay'),
     claimConsole: document.getElementById('claim-console'),
     gameToast: document.getElementById('game-toast'),
     
@@ -76,6 +77,16 @@ export const elements = {
     
     // Card specifics
     cardScrollView: document.getElementById('card-scroll-view'),
+    roundResultIcon: document.getElementById('round-result-icon'),
+    roundResultTitle: document.getElementById('round-result-title'),
+    roundResultSummary: document.getElementById('round-result-summary'),
+    roundResultPattern: document.getElementById('round-result-pattern'),
+    roundResultHandSection: document.getElementById('round-result-hand-section'),
+    roundResultTiles: document.getElementById('round-result-tiles'),
+    roundResultExposures: document.getElementById('round-result-exposures'),
+    btnResultNewRound: document.getElementById('btn-result-new-round'),
+    btnResultViewCard: document.getElementById('btn-result-view-card'),
+    btnResultLobby: document.getElementById('btn-result-lobby'),
 
     // Co-pilot
     btnToggleCopilot: document.getElementById('btn-toggle-copilot'),
@@ -288,6 +299,51 @@ export function renderMyExposures(exposures) {
     });
 }
 
+function appendResultTiles(container, tiles) {
+    for (const tile of tiles || []) {
+        const tileEl = document.createElement('div');
+        tileEl.className = 'tile result-tile';
+        setTileFace(tileEl, tile);
+        container.appendChild(tileEl);
+    }
+}
+
+export function renderRoundResult(result, winnerHand, winnerExposures, canStartRound, actions) {
+    if (!result) {
+        elements.roundResultOverlay.classList.add('hidden');
+        return;
+    }
+    const isDraw = result.type === 'draw';
+    elements.roundResultIcon.textContent = isDraw ? '🤝' : '🏆';
+    elements.roundResultTitle.textContent = isDraw ? 'Round Drawn' : `${result.winnerName || 'Player'} Wins!`;
+    elements.roundResultSummary.textContent = result.message || (isDraw ? 'The wall is empty.' : 'Mahjong!');
+
+    const hasPattern = Boolean(result.patternDisplay);
+    elements.roundResultPattern.classList.toggle('hidden', !hasPattern);
+    elements.roundResultPattern.textContent = hasPattern ? `Matched pattern: ${result.patternDisplay} · ${result.patternDescription || ''}` : '';
+    elements.btnResultViewCard.classList.toggle('hidden', !hasPattern);
+
+    elements.roundResultHandSection.classList.toggle('hidden', isDraw || !winnerHand);
+    elements.roundResultTiles.innerHTML = '';
+    elements.roundResultExposures.innerHTML = '';
+    if (!isDraw && winnerHand) {
+        appendResultTiles(elements.roundResultTiles, winnerHand);
+        for (const meld of winnerExposures || []) {
+            const group = document.createElement('div');
+            group.className = 'result-meld';
+            appendResultTiles(group, meld);
+            elements.roundResultExposures.appendChild(group);
+        }
+    }
+
+    elements.btnResultNewRound.disabled = !canStartRound;
+    elements.btnResultNewRound.textContent = canStartRound ? 'New Round' : 'Waiting for Host';
+    elements.btnResultNewRound.onclick = actions.onNewRound;
+    elements.btnResultViewCard.onclick = actions.onViewCard;
+    elements.btnResultLobby.onclick = actions.onLobby;
+    elements.roundResultOverlay.classList.remove('hidden');
+}
+
 // Render Claim Prompt
 export function renderClaimPrompt(discardTile, discardPlayerName, claims, onClaimSelected) {
     if (claims.length === 0) {
@@ -371,6 +427,7 @@ export function renderCharlestonStep(step, selectedTiles, onTileRemove, onConfir
 }
 
 let latestHandStrengths = []; // Cache of the latest analysis
+let openCardCategory = null;
 
 function escapeHtml(value) {
     return String(value).replace(/[&<>'"]/g, char => ({
@@ -445,6 +502,7 @@ export function initCardReference() {
         hands.forEach(h => {
             const row = document.createElement('div');
             row.className = 'hand-card-row';
+            row.dataset.handId = h.id;
             
             // Find current match percentage if available
             const strength = latestHandStrengths.find(s => s.id === h.id);
@@ -483,6 +541,17 @@ export function initCardReference() {
     // Default load first
     updateHandCount();
     loadCategory('consec');
+    openCardCategory = loadCategory;
+}
+
+export function showCardPattern(category, handId) {
+    toggleOverlay(elements.cardOverlay, true);
+    if (category && openCardCategory) openCardCategory(category);
+    const row = handId ? elements.cardScrollView.querySelector(`[data-hand-id="${CSS.escape(handId)}"]`) : null;
+    if (row) {
+        row.classList.add('result-pattern-highlight');
+        row.scrollIntoView({ block: 'center' });
+    }
 }
 
 export function renderCoPilotSuggestions(hand, exposures = []) {

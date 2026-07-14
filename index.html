@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>American Mahjong PWA</title>
-    <link rel="stylesheet" href="style.css?v=16">
+    <link rel="stylesheet" href="style.css?v=17">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -352,9 +352,29 @@
                 </div>
             </div>
         </div>
+
+        <!-- PERSISTENT ROUND RESULT -->
+        <div id="round-result-overlay" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="round-result-title">
+            <div class="round-result-modal glass">
+                <div class="result-icon" id="round-result-icon">🏆</div>
+                <h2 id="round-result-title">Round Complete</h2>
+                <p id="round-result-summary" class="result-summary"></p>
+                <div id="round-result-pattern" class="result-pattern hidden"></div>
+                <div id="round-result-hand-section" class="result-hand-section hidden">
+                    <h3>Winning Hand</h3>
+                    <div id="round-result-tiles" class="result-tiles"></div>
+                    <div id="round-result-exposures" class="result-exposures"></div>
+                </div>
+                <div class="result-actions">
+                    <button id="btn-result-new-round" class="btn btn-primary">New Round</button>
+                    <button id="btn-result-view-card" class="btn btn-outline">View Matched Pattern</button>
+                    <button id="btn-result-lobby" class="btn btn-outline">Exit to Lobby</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Scripts -->
-    <script type="module" src="js/app.js?v=14"></script>
+    <script type="module" src="js/app.js?v=15"></script>
 </body>
 </html>

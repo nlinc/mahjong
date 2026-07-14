@@ -2,17 +2,17 @@
 import {
     createWall, shuffle, sortHandBySuit, sortHandByValue,
     checkDiscardClaims, checkMahjong, buildClaimMeld, undoLastClaim, SUITS
-} from './engine.js?v=9';
-import { botSelectCharlestonPass, botSelectDiscard, botDecideClaim } from './bot.js?v=9';
+} from './engine.js?v=10';
+import { botSelectCharlestonPass, botSelectDiscard, botDecideClaim } from './bot.js?v=10';
 import {
     elements, switchScreen, toggleOverlay, showToast, renderPlayerRack,
     renderDiscardRiver, renderOpponentSeat, renderMyExposures, renderClaimPrompt,
     renderCharlestonStep, setupMenuOverlay, setupGuideOverlay, setupCardOverlay,
-    getTileChar, renderCoPilotSuggestions
-} from './ui.js?v=13';
+    getTileChar, renderCoPilotSuggestions, renderRoundResult, showCardPattern
+} from './ui.js?v=14';
 import {
     createRoom, joinRoom, subscribeToRoom, updateRoom, mutateRoom, leaveRoom, initFirebase
-} from './firebase.js?v=7';
+} from './firebase.js?v=8';
 
 const appState = {
     mode: 'solo',
@@ -28,6 +28,8 @@ const appState = {
     activeDiscard: null,
     claimWindow: null,
     lastClaimUndo: null,
+    winnerMessage: null,
+    roundResult: null,
     gamePhase: 'setup',
     charlestonStep: 0,
     charlestonPasses: [null, null, null, null],
@@ -138,6 +140,8 @@ function createFreshGameState() {
         activeDiscard: null,
         claimWindow: null,
         lastClaimUndo: null,
+        winnerMessage: null,
+        roundResult: null,
         charlestonStep: 0,
         charlestonPasses: [null, null, null, null],
         selectedTileId: null
@@ -165,6 +169,40 @@ function renderGame() {
         toggleOverlay(elements.charlestonOverlay, false);
         renderTurnState();
     }
+    const fallbackResult = appState.gamePhase === 'gameover' && appState.winnerMessage
+        ? { type: appState.winnerMessage.startsWith('Draw') ? 'draw' : 'win', message: appState.winnerMessage }
+        : null;
+    const result = appState.roundResult || fallbackResult;
+    const winnerSeat = Number.isInteger(result?.winnerSeat) ? result.winnerSeat : null;
+    renderRoundResult(
+        result,
+        winnerSeat == null ? null : appState.hands[winnerSeat],
+        winnerSeat == null ? [] : appState.exposures[winnerSeat],
+        appState.mode === 'solo' || Boolean(appState.players[appState.playerIndex]?.isHost),
+        {
+            onNewRound: startNextRound,
+            onViewCard: () => showCardPattern(result?.patternCategory, result?.patternId),
+            onLobby: exitToMainLobby
+        }
+    );
+}
+
+function makeWinResult(state, seat, players, match, message = null) {
+    const winnerName = players[seat]?.name || `Player ${seat + 1}`;
+    return {
+        type: 'win',
+        winnerSeat: seat,
+        winnerName,
+        message: message || `${winnerName} completed Mahjong with ${state.hands[seat].length} concealed tile${state.hands[seat].length === 1 ? '' : 's'} and ${state.exposures[seat].length} exposed meld${state.exposures[seat].length === 1 ? '' : 's'}.`,
+        patternId: match?.handInfo?.id || null,
+        patternDisplay: match?.handInfo?.display || null,
+        patternDescription: match?.handInfo?.desc || null,
+        patternCategory: match?.handInfo?.category || null
+    };
+}
+
+function makeDrawResult(message = 'The wall is empty. No player completed Mahjong.') {
+    return { type: 'draw', message };
 }
 
 function updateRackUI() {
@@ -376,7 +414,17 @@ function updateActionButtons() {
 }
 
 async function requestDraw() {
-    if (appState.wall.length === 0) return endRoundLocal('Draw game—the wall is empty.');
+    if (appState.wall.length === 0) {
+        if (appState.mode === 'solo') return endRoundLocal('Draw game—the wall is empty.');
+        await mutateRoom(appState.roomId, room => {
+            room.status = 'ended';
+            room.gameState.gamePhase = 'gameover';
+            room.gameState.winnerMessage = 'Draw game—the wall is empty.';
+            room.gameState.roundResult = makeDrawResult();
+            return room;
+        });
+        return;
+    }
     if (appState.mode === 'solo') {
         const tile = appState.wall.pop();
         appState.hands[appState.playerIndex].push(tile);
@@ -481,8 +529,10 @@ function executeClaim(state, seat, type, tile, players) {
     if (type === 'mahjong') {
         state.discards.pop();
         state.hands[seat].push(tile);
+        const match = checkMahjong(state.hands[seat], state.exposures[seat]);
         state.gamePhase = 'gameover';
         state.winnerMessage = `${players[seat].name} wins with Mahjong!`;
+        state.roundResult = makeWinResult(state, seat, players, match);
         state.claimWindow = null;
         state.activeDiscard = null;
         return;
@@ -558,20 +608,23 @@ async function handleDeclareMahjong() {
     const result = checkMahjong(myHand(), myExposures());
     if (!result.matched) return showToast(result.reason || 'That hand is not Mahjong yet.');
     const message = `You win with ${result.handInfo.display}!`;
-    if (appState.mode === 'solo') return endRoundLocal(message);
+    if (appState.mode === 'solo') return endRoundLocal(message, makeWinResult(appState, appState.playerIndex, appState.players, result, message));
     await mutateRoom(appState.roomId, room => {
         if (room.status === 'playing' && room.gameState.currentTurn === appState.playerIndex) {
             room.status = 'ended';
             room.gameState.gamePhase = 'gameover';
             room.gameState.winnerMessage = message;
+            const roomMatch = checkMahjong(room.gameState.hands[appState.playerIndex], room.gameState.exposures[appState.playerIndex]);
+            room.gameState.roundResult = makeWinResult(room.gameState, appState.playerIndex, room.players, roomMatch, message);
         }
         return room;
     });
 }
 
-function endRoundLocal(message) {
+function endRoundLocal(message, result = makeDrawResult(message)) {
     appState.gamePhase = 'gameover';
     appState.winnerMessage = message;
+    appState.roundResult = result;
     showToast(message);
     renderGame();
 }
@@ -604,6 +657,7 @@ function performBotTurn(state, seat, players) {
         if (!state.wall.length) {
             state.gamePhase = 'gameover';
             state.winnerMessage = 'Draw game—the wall is empty.';
+            state.roundResult = makeDrawResult();
             return;
         }
         state.hands[seat].push(state.wall.pop());
@@ -612,6 +666,7 @@ function performBotTurn(state, seat, players) {
     if (match.matched) {
         state.gamePhase = 'gameover';
         state.winnerMessage = `${players[seat].name} wins with Mahjong!`;
+        state.roundResult = makeWinResult(state, seat, players, match);
         return;
     }
     const discard = botSelectDiscard(state.hands[seat]);
@@ -680,6 +735,8 @@ function handleRoomStateUpdate(room) {
         activeDiscard: state.activeDiscard || null,
         claimWindow: state.claimWindow || null,
         lastClaimUndo: state.lastClaimUndo || null,
+        winnerMessage: state.winnerMessage || null,
+        roundResult: state.roundResult || null,
         charlestonStep: state.charlestonStep || 0,
         charlestonPasses: state.charlestonPasses || [null, null, null, null],
         gamePhase: room.status === 'ended' ? 'gameover' : room.status
@@ -754,6 +811,13 @@ async function handleLeaveLobby() {
 function restartLocalGame() {
     if (appState.mode !== 'solo') return showToast('Only the host can start a new multiplayer round.');
     startSoloGame();
+}
+
+async function startNextRound() {
+    elements.roundResultOverlay.classList.add('hidden');
+    if (appState.mode === 'solo') return startSoloGame();
+    if (!appState.players[appState.playerIndex]?.isHost) return;
+    await handleStartGame();
 }
 
 function exitToMainLobby() {

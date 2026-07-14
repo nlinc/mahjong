@@ -756,7 +756,7 @@ export function checkMahjong(hand, exposures = []) {
         for (const item of HANDS_CARD[cat]) {
             if (exposedTiles.length > 0 && item.isConcealed) continue;
             if (checkGroupMatch(item.groups, completeHand, exposures)) {
-                return { matched: true, handInfo: item };
+                return { matched: true, handInfo: { ...item, category: cat } };
             }
         }
     }
