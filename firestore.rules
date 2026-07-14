@@ -15,13 +15,15 @@ service cloud.firestore {
             'wall', 'hands', 'exposures', 'discards', 'currentTurn',
             'activeDiscard', 'claimPrompt', 'claimWindow', 'charlestonStep',
             'charlestonPasses', 'selectedTileId', 'gamePhase', 'winnerMessage',
-            'lastActionTime', 'lastClaimUndo', 'roundResult'
+            'lastActionTime', 'lastClaimUndo', 'roundResult', 'canExchangeJoker'
           ])
           && data.gameState.discards is list
           && data.gameState.discards.size() <= 152
           && data.gameState.currentTurn is int
           && data.gameState.currentTurn >= 0
-          && data.gameState.currentTurn <= 3;
+          && data.gameState.currentTurn <= 3
+          && (!data.gameState.keys().hasAny(['canExchangeJoker'])
+            || data.gameState.canExchangeJoker is bool);
       }
 
       // Short room codes are intentionally readable for link-based family play.

@@ -76,6 +76,33 @@ export function isValidCharlestonPass(pass) {
         new Set(pass).size === 3 && pass.every(id => Number.isInteger(id));
 }
 
+// Exchange a matching natural tile for a Joker in any exposed meld. The
+// exchange is legal only after the current player has drawn or completed a
+// called exposure this turn.
+export function exchangeExposedJoker(state, exchangerSeat, targetSeat, meldIndex, jokerTileId) {
+    if (!state || state.gamePhase === 'gameover' || state.claimWindow ||
+        state.currentTurn !== exchangerSeat || !state.canExchangeJoker) return null;
+    const hand = state.hands?.[exchangerSeat];
+    const meld = state.exposures?.[targetSeat]?.[meldIndex];
+    if (!Array.isArray(hand) || !Array.isArray(meld) || meld.length < 3) return null;
+
+    const jokerIndex = meld.findIndex(tile => tile.id === jokerTileId && tile.suit === SUITS.JOKERS);
+    const naturalTiles = meld.filter(tile => tile.suit !== SUITS.JOKERS);
+    if (jokerIndex < 0 || !naturalTiles.length) return null;
+    const required = naturalTiles[0];
+    if (!naturalTiles.every(tile => tile.suit === required.suit && tile.val === required.val)) return null;
+    const naturalIndex = hand.findIndex(tile => tile.suit === required.suit && tile.val === required.val);
+    if (naturalIndex < 0) return null;
+
+    const natural = hand.splice(naturalIndex, 1)[0];
+    const joker = meld[jokerIndex];
+    meld[jokerIndex] = natural;
+    hand.push(joker);
+    state.hands[exchangerSeat] = sortHandBySuit(hand);
+    state.lastClaimUndo = null;
+    return { joker, natural, targetSeat, meldIndex };
+}
+
 // Sorting Helpers
 export function sortHandBySuit(hand) {
     const suitOrder = [

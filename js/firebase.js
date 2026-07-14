@@ -125,6 +125,7 @@ export async function createRoom(roomId, hostName) {
             activeDiscard: null,
             claimPrompt: null,
             lastClaimUndo: null,
+            canExchangeJoker: false,
             winnerMessage: null,
             roundResult: null,
             exposures: [[], [], [], []],

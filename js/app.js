@@ -1,18 +1,19 @@
 /* Main application coordinator. Game state is canonical and shared by solo and multiplayer. */
 import {
     createWall, shuffle, sortHandBySuit, sortHandByValue,
-    checkDiscardClaims, checkMahjong, buildClaimMeld, undoLastClaim, isValidCharlestonPass, SUITS
-} from './engine.js?v=12';
-import { botSelectCharlestonPass, botSelectDiscard, botDecideClaim } from './bot.js?v=12';
+    checkDiscardClaims, checkMahjong, buildClaimMeld, undoLastClaim, isValidCharlestonPass,
+    exchangeExposedJoker, SUITS
+} from './engine.js?v=13';
+import { botSelectCharlestonPass, botSelectDiscard, botDecideClaim } from './bot.js?v=13';
 import {
     elements, switchScreen, toggleOverlay, showToast, renderPlayerRack,
     renderDiscardRiver, renderOpponentSeat, renderMyExposures, renderClaimPrompt,
     renderCharlestonStep, setupMenuOverlay, setupGuideOverlay, setupCardOverlay,
     getTileChar, renderCoPilotSuggestions, renderRoundResult, showCardPattern
-} from './ui.js?v=16';
+} from './ui.js?v=17';
 import {
     createRoom, joinRoom, subscribeToRoom, updateRoom, mutateRoom, leaveRoom, initFirebase
-} from './firebase.js?v=9';
+} from './firebase.js?v=10';
 
 const appState = {
     mode: 'solo',
@@ -28,6 +29,7 @@ const appState = {
     activeDiscard: null,
     claimWindow: null,
     lastClaimUndo: null,
+    canExchangeJoker: false,
     winnerMessage: null,
     roundResult: null,
     gamePhase: 'setup',
@@ -141,6 +143,7 @@ function createFreshGameState() {
         activeDiscard: null,
         claimWindow: null,
         lastClaimUndo: null,
+        canExchangeJoker: false,
         winnerMessage: null,
         roundResult: null,
         charlestonStep: 0,
@@ -208,7 +211,7 @@ function makeDrawResult(message = 'The wall is empty. No player completed Mahjon
 
 function updateRackUI() {
     renderPlayerRack(myHand(), appState.selectedTileId, handleTileSelect, handleTileDoubleClick);
-    renderMyExposures(myExposures());
+    renderMyExposures(myExposures(), jokerExchangeOptions(appState.playerIndex));
     if (!elements.coPilotPanel.classList.contains('hidden')) renderCoPilotSuggestions(myHand(), myExposures());
 }
 
@@ -226,7 +229,65 @@ function updateOpponentsUI() {
             handCount: effectiveCount(appState, seat),
             exposures: appState.exposures[seat]
         } : null;
-        renderOpponentSeat(seat, id, view, appState.currentTurn === seat && appState.gamePhase === 'playing');
+        renderOpponentSeat(
+            seat,
+            id,
+            view,
+            appState.currentTurn === seat && appState.gamePhase === 'playing',
+            jokerExchangeOptions(seat)
+        );
+    }
+}
+
+function canExchangeJokerNow() {
+    return appState.gamePhase === 'playing' && !appState.claimWindow &&
+        appState.currentTurn === appState.playerIndex && appState.canExchangeJoker &&
+        effectiveCount(appState, appState.playerIndex) === 14;
+}
+
+function jokerExchangeOptions(targetSeat) {
+    if (!canExchangeJokerNow()) return null;
+    return {
+        targetSeat,
+        playerHand: myHand(),
+        onExchange: handleJokerExchange
+    };
+}
+
+function hasAvailableJokerExchange() {
+    if (!canExchangeJokerNow()) return false;
+    return appState.exposures.some(melds => (melds || []).some(meld => {
+        const required = meld.find(tile => tile.suit !== SUITS.JOKERS);
+        return required && meld.some(tile => tile.suit === SUITS.JOKERS) &&
+            myHand().some(tile => tile.suit === required.suit && tile.val === required.val);
+    }));
+}
+
+async function handleJokerExchange(targetSeat, meldIndex, jokerTileId) {
+    const seat = appState.playerIndex;
+    if (!canExchangeJokerNow()) return showToast('Draw or complete a call before exchanging a Joker.');
+
+    if (appState.mode === 'solo') {
+        const exchange = exchangeExposedJoker(appState, seat, targetSeat, meldIndex, jokerTileId);
+        if (!exchange) return showToast('That Joker can no longer be exchanged.');
+        appState.selectedTileId = null;
+        showToast(`Exchanged ${getTileChar(exchange.natural.suit, exchange.natural.val)} for a Joker.`);
+        renderGame();
+        return;
+    }
+
+    try {
+        await mutateRoom(appState.roomId, room => {
+            if (room.status !== 'playing') throw new Error('The round is no longer active.');
+            const exchange = exchangeExposedJoker(room.gameState, seat, targetSeat, meldIndex, jokerTileId);
+            if (!exchange) throw new Error('That Joker can no longer be exchanged.');
+            return room;
+        });
+        appState.selectedTileId = null;
+        updateActionButtons();
+        showToast('Joker exchanged into your rack.');
+    } catch (error) {
+        showToast(error.message || 'Could not exchange the Joker.');
     }
 }
 
@@ -351,6 +412,7 @@ async function handleConfirmCharlestonPass() {
                 resolveCharlestonPasses(state);
                 if (state.charlestonStep >= 6) {
                     room.status = 'playing';
+                    state.gamePhase = 'playing';
                     state.currentTurn = 0;
                 }
             }
@@ -383,8 +445,10 @@ async function finishCharlestonEarly() {
     await mutateRoom(appState.roomId, room => {
         if (room.status === 'charleston' && room.gameState.charlestonStep === 3) {
             room.status = 'playing';
+            room.gameState.gamePhase = 'playing';
             room.gameState.currentTurn = 0;
             room.gameState.charlestonPasses = [null, null, null, null];
+            room.gameState.canExchangeJoker = false;
         }
         return room;
     });
@@ -394,6 +458,7 @@ function concludeCharleston(state) {
     state.gamePhase = 'playing';
     state.currentTurn = 0;
     state.charlestonPasses = [null, null, null, null];
+    state.canExchangeJoker = false;
     document.body.classList.remove('charleston-active');
     showToast('Charleston complete. East begins.');
 }
@@ -423,7 +488,9 @@ function renderTurnState() {
 
     if (appState.currentTurn === appState.playerIndex) {
         if (effectiveCount(appState, appState.playerIndex) === 13) requestDraw();
-        else elements.turnInstruction.textContent = 'Select a tile from your rack to discard.';
+        else elements.turnInstruction.textContent = hasAvailableJokerExchange()
+            ? 'Discard a tile, or tap a highlighted exposed Joker to exchange.'
+            : 'Select a tile from your rack to discard.';
     } else {
         elements.turnInstruction.textContent = `${appState.players[appState.currentTurn]?.name || 'Player'} is thinking…`;
         scheduleBotTurnIfNeeded();
@@ -455,6 +522,7 @@ async function requestDraw() {
     if (appState.mode === 'solo') {
         const tile = appState.wall.pop();
         appState.hands[appState.playerIndex].push(tile);
+        appState.canExchangeJoker = true;
         appState.selectedTileId = tile.id;
         appState.hands[appState.playerIndex] = sortHandBySuit(myHand());
         showToast(`Drew ${getTileChar(tile.suit, tile.val)}`);
@@ -469,6 +537,7 @@ async function requestDraw() {
             if (room.status !== 'playing' || state.claimWindow || state.currentTurn !== appState.playerIndex) return room;
             if (effectiveCount(state, appState.playerIndex) !== 13 || !state.wall.length) return room;
             state.hands[appState.playerIndex].push(state.wall.pop());
+            state.canExchangeJoker = true;
             return room;
         });
     } finally {
@@ -504,6 +573,7 @@ function applyDiscard(state, seat, tileId, players) {
     const tile = state.hands[seat].splice(index, 1)[0];
     state.discards.push(tile);
     state.activeDiscard = tile;
+    state.canExchangeJoker = false;
     state.claimWindow = buildClaimWindow(state, tile, seat, players);
     if (!state.claimWindow || allClaimsAnswered(state.claimWindow)) resolveClaimWindow(state, players);
     return true;
@@ -531,6 +601,7 @@ function resolveClaimWindow(state, players) {
     const window = state.claimWindow;
     if (!window) {
         state.currentTurn = nextSeat(state.currentTurn);
+        state.canExchangeJoker = false;
         state.activeDiscard = null;
         return;
     }
@@ -545,6 +616,7 @@ function resolveClaimWindow(state, players) {
     });
     if (!calls.length) {
         state.currentTurn = nextSeat(window.discarder);
+        state.canExchangeJoker = false;
         state.activeDiscard = null;
         state.claimWindow = null;
         return;
@@ -569,6 +641,7 @@ function executeClaim(state, seat, type, tile, players) {
     const claim = buildClaimMeld(hand, tile, type);
     if (!claim) {
         state.currentTurn = nextSeat(state.claimWindow.discarder);
+        state.canExchangeJoker = false;
         state.claimWindow = null;
         state.activeDiscard = null;
         return;
@@ -588,6 +661,7 @@ function executeClaim(state, seat, type, tile, players) {
         priorClaimWindow
     };
     state.currentTurn = seat;
+    state.canExchangeJoker = true;
     state.claimWindow = null;
     state.activeDiscard = null;
 }
@@ -688,6 +762,7 @@ function performBotTurn(state, seat, players) {
             return;
         }
         state.hands[seat].push(state.wall.pop());
+        state.canExchangeJoker = true;
     }
     const match = checkMahjong(state.hands[seat], state.exposures[seat]);
     if (match.matched) {
@@ -766,6 +841,7 @@ function handleRoomStateUpdate(room) {
         activeDiscard: state.activeDiscard || null,
         claimWindow: state.claimWindow || null,
         lastClaimUndo: state.lastClaimUndo || null,
+        canExchangeJoker: Boolean(state.canExchangeJoker),
         winnerMessage: state.winnerMessage || null,
         roundResult: state.roundResult || null,
         charlestonStep: state.charlestonStep || 0,

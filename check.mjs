@@ -3,7 +3,7 @@ import {
     createWall, sortHandBySuit, sortHandByValue, 
     checkMahjong, SUITS, HANDS_CARD, parseCustomPattern, checkGroupMatch,
     analyzeHandStrengths, getHandDifficulty, buildClaimMeld, checkDiscardClaims, undoLastClaim,
-    isValidCharlestonPass
+    isValidCharlestonPass, exchangeExposedJoker
 } from './js/engine.js';
 import { readFileSync } from 'node:fs';
 
@@ -39,6 +39,31 @@ try {
     assert(dots.length === 36, `Wall should contain exactly 36 Dots (got ${dots.length})`);
 } catch (e) {
     assert(false, `Wall generation failed: ${e.message}`);
+}
+
+// A Joker in any exposed meld can be redeemed for its matching natural tile,
+// but only after the exchanger has started their turn by drawing or calling.
+try {
+    const joker = { id: 301, suit: SUITS.JOKERS, val: 'J' };
+    const fiveDot = id => ({ id, suit: SUITS.DOTS, val: 5 });
+    const exchangeState = {
+        gamePhase: 'playing',
+        currentTurn: 0,
+        claimWindow: null,
+        canExchangeJoker: false,
+        hands: [[fiveDot(305)], [], [], []],
+        exposures: [[], [[fiveDot(302), fiveDot(303), fiveDot(304), joker]], [], []],
+        lastClaimUndo: { seat: 0 }
+    };
+    assert(!exchangeExposedJoker(exchangeState, 0, 1, 0, joker.id), 'Joker exchange must wait until the player has drawn or called');
+    exchangeState.canExchangeJoker = true;
+    const exchange = exchangeExposedJoker(exchangeState, 0, 1, 0, joker.id);
+    assert(exchange?.joker.id === joker.id, 'Matching natural tile should redeem the exposed Joker');
+    assert(exchangeState.hands[0].some(tile => tile.id === joker.id), 'Redeemed Joker should move into the exchanger rack');
+    assert(exchangeState.exposures[1][0].every(tile => tile.suit === SUITS.DOTS && tile.val === 5), 'Natural tile should replace the Joker in the exposed meld');
+    assert(exchangeState.lastClaimUndo === null, 'Joker exchange should close the prior claim undo window');
+} catch (e) {
+    assert(false, `Joker exchange failed: ${e.message}`);
 }
 
 // Charleston synchronization only treats a complete, unique 3-tile payload as submitted.
@@ -245,6 +270,9 @@ try {
     assert(!css.includes('.claim-tile-announcement span'), 'Claim prompt styles must not override nested tile labels');
     assert(html.includes('co-pilot-color-key') && css.includes('--pattern-suit-a'), 'Co-pilot and card reference must include the relative-suit color key');
     assert(css.includes('.discard-river {\n    position: absolute;') && css.includes('.table-center {') && css.includes('overscroll-behavior: contain'), 'Discard river must scroll without contributing to mobile board height');
+    assert(ui.includes("W: 'White Dragon (Soap)'") && ui.includes('tile-caption">SOAP'), 'White Dragon must render and read as Soap');
+    assert(css.includes('body.charleston-active .game-header') && css.includes('.tile-exposed.joker-exchange'), 'Charleston header access and highlighted Joker exchanges must remain styled');
+    assert(ui.includes("tileEl.setAttribute('title', getTileLabel(tile.suit, tile.val))"), 'Discarded tiles must expose readable tile names');
 } catch (e) {
     assert(false, `DOM contract checks failed: ${e.message}`);
 }

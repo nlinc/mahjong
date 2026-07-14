@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>American Mahjong PWA</title>
-    <link rel="stylesheet" href="style.css?v=20">
+    <link rel="stylesheet" href="style.css?v=21">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -324,7 +324,7 @@
                     <ul>
                         <li><strong>Suits:</strong> Dots 🔴, Bams 🎋, Crakes 🀇 (numbers 1-9, four of each)</li>
                         <li><strong>Winds:</strong> East, South, West, North (four of each)</li>
-                        <li><strong>Dragons:</strong> Green, Red, White (Sope) (four of each)</li>
+                        <li><strong>Dragons:</strong> Green, Red, White (Soap) (four of each)</li>
                         <li><strong>Flowers:</strong> 8 special flower tiles (always counts as value cards, cannot be used in numerical runs)</li>
                         <li><strong>Jokers:</strong> 8 wild tiles. Can replace any tile in a Pung (3), Kong (4), Quint (5), or Sextet (6). <em>Cannot be used for singles or pairs!</em></li>
                     </ul>
@@ -341,6 +341,9 @@
                         <li><strong>Sextet:</strong> 6 identical tiles (requires Jokers)</li>
                     </ul>
                     <p>To claim a discard, click the call button. You must immediately expose the completed meld on your rack. You cannot claim sequences (Chows).</p>
+
+                    <h3>Joker Exchange</h3>
+                    <p>After drawing—or after claiming a discard and exposing its completed meld—you may exchange a matching natural tile from your rack for a Joker in any player’s exposed Pung, Kong, Quint, or Sextet. Tap a highlighted exposed Joker; the matching tile replaces it and the Joker moves into your rack. You may then continue your turn and discard normally.</p>
 
                     <h3>Step 3: Declaring Mahjong</h3>
                     <p>When your hand has 14 tiles matching a pattern on the card, call <strong>MAHJONG</strong>! If you match the hand, you win the round.</p>
@@ -386,6 +389,6 @@
     </div>
 
     <!-- Scripts -->
-    <script type="module" src="js/app.js?v=17"></script>
+    <script type="module" src="js/app.js?v=18"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-import { SUITS, HANDS_CARD, CARD_CATEGORIES, analyzeHandStrengths, getHandDifficulty, saveCustomHand, deleteCustomHand } from './engine.js?v=12';
+import { SUITS, HANDS_CARD, CARD_CATEGORIES, analyzeHandStrengths, getHandDifficulty, saveCustomHand, deleteCustomHand } from './engine.js?v=13';
 
 // DOM selectors
 export const elements = {
@@ -113,6 +113,10 @@ function getTileLabel(suit, val) {
     const suitNames = { dots: 'Dot', bams: 'Bam', crakes: 'Crak', winds: 'Wind', dragons: 'Dragon' };
     if (suit === SUITS.FLOWERS) return 'Flower';
     if (suit === SUITS.JOKERS) return 'Joker';
+    if (suit === SUITS.DRAGONS) return ({
+        G: 'Green Dragon', R: 'Red Dragon', W: 'White Dragon (Soap)'
+    })[val] || `${val} Dragon`;
+    if (suit === SUITS.WINDS) return ({ E: 'East Wind', S: 'South Wind', W: 'West Wind', N: 'North Wind' })[val];
     return `${val} ${suitNames[suit] || suit}`;
 }
 
@@ -120,21 +124,25 @@ function getTileFaceMarkup(suit, val) {
     const safeVal = String(val);
     if (suit === SUITS.DOTS) {
         const pips = Array.from({ length: Number(val) }, (_, index) => `<i class="pip pip-${index % 3}"></i>`).join('');
-        return `<span class="tile-corner">${safeVal}</span><span class="tile-pips count-${safeVal}">${pips}</span>`;
+        return `<span class="tile-corner">${safeVal}</span><span class="tile-pips count-${safeVal}">${pips}</span><span class="tile-caption">DOT</span>`;
     }
     if (suit === SUITS.BAMS) {
         const sticks = Array.from({ length: Number(val) }, (_, index) => `<i class="bam bam-${index % 2}"></i>`).join('');
-        return `<span class="tile-corner">${safeVal}</span><span class="tile-bams count-${safeVal}">${sticks}</span>`;
+        return `<span class="tile-corner">${safeVal}</span><span class="tile-bams count-${safeVal}">${sticks}</span><span class="tile-caption">BAM</span>`;
     }
     if (suit === SUITS.CRAKES) {
-        return `<span class="tile-corner">${safeVal}</span><span class="tile-glyph crak-glyph">萬</span>`;
+        return `<span class="tile-corner">${safeVal}</span><span class="tile-glyph crak-glyph">萬</span><span class="tile-caption">CRAK</span>`;
     }
     if (suit === SUITS.WINDS) {
         return `<span class="tile-glyph wind-glyph">${safeVal}</span><span class="tile-caption">WIND</span>`;
     }
     if (suit === SUITS.DRAGONS) {
-        const glyph = { G: '發', R: '中', W: '白' }[val] || safeVal;
-        return `<span class="tile-glyph dragon-glyph">${glyph}</span><span class="tile-caption">DRAGON</span>`;
+        if (val === 'W') {
+            return '<span class="soap-frame" aria-hidden="true"><span class="soap-zero">0</span></span><span class="tile-caption">SOAP</span>';
+        }
+        const glyph = { G: '發', R: '中' }[val] || safeVal;
+        const caption = val === 'G' ? 'GREEN' : val === 'R' ? 'RED' : 'DRAGON';
+        return `<span class="tile-glyph dragon-glyph">${glyph}</span><span class="tile-caption">${caption}</span>`;
     }
     if (suit === SUITS.FLOWERS) {
         return '<span class="tile-glyph flower-glyph">✿</span><span class="tile-caption">FLOWER</span>';
@@ -222,6 +230,8 @@ export function renderDiscardRiver(discards) {
         const tileEl = document.createElement('div');
         tileEl.className = 'tile tile-discarded';
         setTileFace(tileEl, tile);
+        tileEl.setAttribute('title', getTileLabel(tile.suit, tile.val));
+        tileEl.setAttribute('aria-label', getTileLabel(tile.suit, tile.val));
         
         // Highlight last discard
         if (index === discards.length - 1) {
@@ -236,8 +246,42 @@ export function renderDiscardRiver(discards) {
     elements.discardRiver.scrollTop = elements.discardRiver.scrollHeight;
 }
 
+function renderExposureMeld(container, meld, meldIndex, exchangeOptions, gap, marginRight) {
+    const groupEl = document.createElement('div');
+    groupEl.className = 'exposed-meld-group';
+    groupEl.style.gap = gap;
+    groupEl.style.marginRight = marginRight;
+    const required = meld.find(tile => tile.suit !== SUITS.JOKERS);
+    const matchingNatural = required && exchangeOptions?.playerHand?.find(tile =>
+        tile.suit === required.suit && tile.val === required.val
+    );
+
+    meld.forEach(tile => {
+        const canExchange = tile.suit === SUITS.JOKERS && matchingNatural && exchangeOptions?.onExchange;
+        const tileEl = document.createElement(canExchange ? 'button' : 'div');
+        if (canExchange) tileEl.type = 'button';
+        tileEl.className = `tile tile-exposed${canExchange ? ' joker-exchange' : ''}`;
+        setTileFace(tileEl, tile);
+        const label = getTileLabel(tile.suit, tile.val);
+        const title = canExchange
+            ? `Exchange ${getTileLabel(matchingNatural.suit, matchingNatural.val)} for this Joker`
+            : label;
+        tileEl.setAttribute('title', title);
+        tileEl.setAttribute('aria-label', title);
+        if (canExchange) {
+            tileEl.addEventListener('click', () => exchangeOptions.onExchange(
+                exchangeOptions.targetSeat,
+                meldIndex,
+                tile.id
+            ));
+        }
+        groupEl.appendChild(tileEl);
+    });
+    container.appendChild(groupEl);
+}
+
 // Render Opponent Seat
-export function renderOpponentSeat(seatIndex, seatDivId, playerState, isActiveTurn) {
+export function renderOpponentSeat(seatIndex, seatDivId, playerState, isActiveTurn, exchangeOptions = null) {
     const seatEl = document.getElementById(seatDivId);
     if (!seatEl) return;
     
@@ -256,19 +300,9 @@ export function renderOpponentSeat(seatIndex, seatDivId, playerState, isActiveTu
         // Render exposures
         exposuresRow.innerHTML = '';
         if (playerState.exposures && playerState.exposures.length > 0) {
-            playerState.exposures.forEach(meld => {
-                const groupEl = document.createElement('div');
-                groupEl.style.display = 'flex';
-                groupEl.style.gap = '2px';
-                groupEl.style.marginRight = '8px';
-                meld.forEach(tile => {
-                    const tileEl = document.createElement('div');
-                    tileEl.className = 'tile tile-exposed';
-                    setTileFace(tileEl, tile);
-                    groupEl.appendChild(tileEl);
-                });
-                exposuresRow.appendChild(groupEl);
-            });
+            playerState.exposures.forEach((meld, meldIndex) =>
+                renderExposureMeld(exposuresRow, meld, meldIndex, exchangeOptions, '2px', '8px')
+            );
         }
     } else {
         profileName.textContent = 'Empty Slot';
@@ -279,24 +313,13 @@ export function renderOpponentSeat(seatIndex, seatDivId, playerState, isActiveTu
 }
 
 // Render Player Exposures
-export function renderMyExposures(exposures) {
+export function renderMyExposures(exposures, exchangeOptions = null) {
     elements.myExposuresRow.innerHTML = '';
     if (!exposures || exposures.length === 0) return;
     
-    exposures.forEach(meld => {
-        const groupEl = document.createElement('div');
-        groupEl.style.display = 'flex';
-        groupEl.style.gap = '3px';
-        groupEl.style.marginRight = '12px';
-        
-        meld.forEach(tile => {
-            const tileEl = document.createElement('div');
-            tileEl.className = 'tile tile-exposed';
-            setTileFace(tileEl, tile);
-            groupEl.appendChild(tileEl);
-        });
-        elements.myExposuresRow.appendChild(groupEl);
-    });
+    exposures.forEach((meld, meldIndex) =>
+        renderExposureMeld(elements.myExposuresRow, meld, meldIndex, exchangeOptions, '3px', '12px')
+    );
 }
 
 function appendResultTiles(container, tiles) {

@@ -1,17 +1,17 @@
-const CACHE_NAME = 'mahjong-pwa-v23';
+const CACHE_NAME = 'mahjong-pwa-v24';
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=20',
+  './style.css?v=21',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
-  './js/engine.js?v=12',
+  './js/engine.js?v=13',
   './js/practice-card.js?v=1',
-  './js/bot.js?v=12',
-  './js/ui.js?v=16',
-  './js/firebase.js?v=9',
-  './js/app.js?v=17'
+  './js/bot.js?v=13',
+  './js/ui.js?v=17',
+  './js/firebase.js?v=10',
+  './js/app.js?v=18'
 ];
 
 self.addEventListener('install', (event) => {
