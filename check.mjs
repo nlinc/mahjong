@@ -157,6 +157,7 @@ try {
     const html = readFileSync(new URL('./index.html', import.meta.url), 'utf8');
     const ui = readFileSync(new URL('./js/ui.js', import.meta.url), 'utf8');
     const app = readFileSync(new URL('./js/app.js', import.meta.url), 'utf8');
+    const css = readFileSync(new URL('./style.css', import.meta.url), 'utf8');
     const htmlIds = [...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
     const duplicateIds = htmlIds.filter((id, index) => htmlIds.indexOf(id) !== index);
     assert(duplicateIds.length === 0, `HTML IDs must be unique${duplicateIds.length ? `: ${duplicateIds.join(', ')}` : ''}`);
@@ -169,6 +170,7 @@ try {
     const usedElementNames = new Set([...app.matchAll(/elements\.([A-Za-z][A-Za-z0-9]+)/g)].map(match => match[1]));
     const missingRegistryNames = [...usedElementNames].filter(name => !registryNames.has(name));
     assert(missingRegistryNames.length === 0, `Every app element reference must be registered${missingRegistryNames.length ? `: ${missingRegistryNames.join(', ')}` : ''}`);
+    assert(!css.includes('.claim-tile-announcement span'), 'Claim prompt styles must not override nested tile labels');
 } catch (e) {
     assert(false, `DOM contract checks failed: ${e.message}`);
 }

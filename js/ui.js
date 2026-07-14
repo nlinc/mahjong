@@ -294,8 +294,13 @@ export function renderClaimPrompt(discardTile, discardPlayerName, claims, onClai
         return;
     }
     
-    elements.claimConsole.querySelector('.claim-tile-announcement').innerHTML = 
-        `${discardPlayerName} discarded: <span id="claim-tile-display" class="tile claim-tile-face" data-suit="${discardTile.suit}" data-val="${discardTile.val}">${getTileFaceMarkup(discardTile.suit, discardTile.val)}</span>`;
+    const announcement = elements.claimConsole.querySelector('.claim-tile-announcement');
+    announcement.textContent = `${discardPlayerName} discarded:`;
+    const tileDisplay = document.createElement('span');
+    tileDisplay.id = 'claim-tile-display';
+    tileDisplay.className = 'tile claim-tile-face';
+    setTileFace(tileDisplay, discardTile);
+    announcement.appendChild(tileDisplay);
     
     // Toggle action buttons
     elements.btnClaimPung.classList.toggle('hidden', !claims.includes('pung'));

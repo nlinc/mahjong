@@ -640,13 +640,17 @@ body {
 .claim-tile-announcement {
     font-size: 0.95rem;
     font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 58px;
 }
 
-.claim-tile-announcement span {
-    font-size: 1.8rem;
-    display: inline-block;
-    vertical-align: middle;
-    margin-left: 6px;
+.claim-tile-announcement > .claim-tile-face {
+    flex: 0 0 auto;
+    margin: 0;
+    font-size: 1rem;
 }
 
 .claim-actions {
@@ -887,7 +891,7 @@ body {
 
 .claim-tile-face {
     vertical-align: middle;
-    margin-left: 8px;
+    margin-left: 0;
 }
 
 /* Tile states */
