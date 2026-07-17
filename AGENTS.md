@@ -1,5 +1,7 @@
 # AGENTS.md — American Mahjong PWA
 
+> ⚙️ **Self-maintenance rule — do this automatically, every time.** If a change you make alters this repo's **shape** (files, entry points, structure), its **stack/dependencies**, the **build/test loop**, or a **guardrail**, you MUST update the matching section of THIS file in the *same commit* — before the task counts as done. This is not optional cleanup or a follow-up task.
+
 A mobile-first American Mahjong scoring/practice game (NMJL-style hands, Charleston, solo bots, and family multiplayer via Firebase/localStorage). Keep changes conservative and preserve the existing structure.
 
 ## Stack (authoritative)
