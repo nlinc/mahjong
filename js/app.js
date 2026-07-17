@@ -3,14 +3,15 @@ import {
     createWall, shuffle, sortHandBySuit, sortHandByValue,
     checkDiscardClaims, checkMahjong, buildClaimMeld, undoLastClaim, isValidCharlestonPass,
     exchangeExposedJoker, SUITS
-} from './engine.js?v=13';
-import { botSelectCharlestonPass, botSelectDiscard, botDecideClaim } from './bot.js?v=13';
+} from './engine.js?v=14';
+import { botSelectCharlestonPass, botSelectDiscard, botDecideClaim } from './bot.js?v=14';
 import {
     elements, switchScreen, toggleOverlay, showToast, renderPlayerRack,
     renderDiscardRiver, renderOpponentSeat, renderMyExposures, renderClaimPrompt,
     renderCharlestonStep, setupMenuOverlay, setupGuideOverlay, setupCardOverlay,
-    getTileChar, renderCoPilotSuggestions, renderRoundResult, showCardPattern
-} from './ui.js?v=18';
+    getTileChar, renderCoPilotSuggestions, clearCoPilotGuidance, resetCoPilotTarget,
+    renderRoundResult, showCardPattern
+} from './ui.js?v=19';
 import {
     createRoom, joinRoom, subscribeToRoom, updateRoom, mutateRoom, leaveRoom, initFirebase
 } from './firebase.js?v=10';
@@ -111,6 +112,7 @@ function closeMultiplayerPanel() {
 }
 
 function startSoloGame() {
+    resetCoPilotTarget();
     appState.mode = 'solo';
     appState.roomId = null;
     appState.playerIndex = 0;
@@ -216,7 +218,20 @@ function winnerAnnouncement(name) {
 function updateRackUI() {
     renderPlayerRack(myHand(), appState.selectedTileId, handleTileSelect, handleTileDoubleClick);
     renderMyExposures(myExposures(), jokerExchangeOptions(appState.playerIndex));
-    if (!elements.coPilotPanel.classList.contains('hidden')) renderCoPilotSuggestions(myHand(), myExposures());
+    if (!elements.coPilotPanel.classList.contains('hidden')) {
+        renderCoPilotSuggestions(myHand(), myExposures(), visibleDeadTiles());
+    }
+}
+
+function visibleDeadTiles() {
+    const opponentExposures = appState.exposures.flatMap((melds, seat) =>
+        seat === appState.playerIndex ? [] : (melds || []).flat()
+    );
+    const claimableTileId = appState.claimWindow?.tile?.id ?? appState.activeDiscard?.id;
+    const settledDiscards = claimableTileId == null
+        ? appState.discards
+        : appState.discards.filter(tile => tile.id !== claimableTileId);
+    return [...settledDiscards, ...opponentExposures];
 }
 
 function updateOpponentsUI() {
@@ -298,7 +313,8 @@ async function handleJokerExchange(targetSeat, meldIndex, jokerTileId) {
 function toggleCoPilot() {
     const hidden = elements.coPilotPanel.classList.toggle('hidden');
     elements.btnToggleCopilot.classList.toggle('active', !hidden);
-    if (!hidden) renderCoPilotSuggestions(myHand(), myExposures());
+    if (hidden) clearCoPilotGuidance();
+    else renderCoPilotSuggestions(myHand(), myExposures(), visibleDeadTiles());
 }
 
 function sortMyHand(sorter) {
@@ -838,6 +854,10 @@ function handleRoomStateUpdate(room) {
     renderLobby(room);
     if (!['charleston', 'playing', 'ended'].includes(room.status)) return;
     const state = room.gameState;
+    if (room.status === 'charleston' && state.charlestonStep === 0 &&
+        (appState.gamePhase !== 'charleston' || appState.charlestonStep !== 0)) {
+        resetCoPilotTarget();
+    }
     const previousCharlestonStep = appState.charlestonStep;
     const normalizedPasses = [0, 1, 2, 3].map(seat =>
         isValidCharlestonPass(state.charlestonPasses?.[seat]) ? state.charlestonPasses[seat] : null
@@ -897,6 +917,7 @@ function refreshLobbyStartButton() {
 
 async function handleStartGame() {
     if (!appState.players[appState.playerIndex]?.isHost) return;
+    resetCoPilotTarget();
     const players = structuredClone(appState.players);
     if (elements.chkFillBots.checked) {
         const names = ['Bot Alpha 🤖', 'Bot Beta 🤖', 'Bot Gamma 🤖'];

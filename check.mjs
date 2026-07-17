@@ -2,8 +2,8 @@
 import {
     createWall, sortHandBySuit, sortHandByValue, 
     checkMahjong, SUITS, HANDS_CARD, parseCustomPattern, checkGroupMatch,
-    analyzeHandStrengths, getHandDifficulty, buildClaimMeld, checkDiscardClaims, undoLastClaim,
-    isValidCharlestonPass, exchangeExposedJoker
+    analyzeHandStrengths, selectCoPilotRecommendations, getHandFit, getHandDifficulty,
+    buildClaimMeld, checkDiscardClaims, undoLastClaim, isValidCharlestonPass, exchangeExposedJoker
 } from './js/engine.js';
 import { readFileSync } from 'node:fs';
 
@@ -104,6 +104,21 @@ try {
     assert(resA.matched === true, `Hand A (natural + jokers) should match Consec 1 (got: ${resA.matched})`);
     assert(resA.handInfo?.category === 'consec', 'Winning result should identify the matched card category');
 
+    const flowerNaturalOnlyGroups = [
+        { size: 4, suit: SUITS.FLOWERS, val: 'F', isRelative: false },
+        { size: 5, suit: SUITS.DOTS, val: 5, isRelative: false },
+        { size: 5, suit: SUITS.DOTS, val: 6, isRelative: false }
+    ];
+    const invalidFlowerJokerHand = [
+        ...[31, 32, 33].map(id => ({ id, suit: SUITS.FLOWERS, val: 'F' })),
+        { id: 34, suit: SUITS.JOKERS, val: 'J' },
+        ...[35, 36, 37, 38].map(id => ({ id, suit: SUITS.DOTS, val: 5 })),
+        { id: 39, suit: SUITS.JOKERS, val: 'J' },
+        ...[40, 41, 42, 43].map(id => ({ id, suit: SUITS.DOTS, val: 6 })),
+        { id: 44, suit: SUITS.JOKERS, val: 'J' }
+    ];
+    assert(!checkGroupMatch(flowerNaturalOnlyGroups, invalidFlowerJokerHand), 'A Joker must never substitute for a Flower');
+
     // Hand B: Invalid tile count (13 tiles)
     const handB = handA.slice(0, 13);
     const resB = checkMahjong(handB);
@@ -152,6 +167,27 @@ try {
 
 } catch (e) {
     assert(false, `Singles & Pairs tests failed: ${e.message}`);
+}
+
+// Learner mode must surface an attainable path even when a harder hand has a
+// higher raw percentage, and its concrete fit drives rack guidance.
+try {
+    const learningRack = [1, 2, 3, 4, 5, 6, 7].map((val, index) => ({
+        id: 700 + index, suit: SUITS.DOTS, val
+    }));
+    const learningStrengths = analyzeHandStrengths(learningRack);
+    const learningChoices = selectCoPilotRecommendations(learningStrengths);
+    const bestPath = learningChoices.find(item => item.roles.includes('Best Path'));
+    const closestPath = learningChoices.find(item => item.roles.includes('Closest'));
+    assert(bestPath?.difficulty.level === 'Easy', `Best Path should favor an attainable hand (got ${bestPath?.difficulty.level})`);
+    assert(closestPath?.difficulty.level === 'Expert' && closestPath.matchCount > bestPath.matchCount, 'Closest must preserve the higher-progress Expert option without making it the Best Path');
+    assert(bestPath.fit.keepTileIds.length === bestPath.matchCount, 'Best Path must identify the rack tiles that support its chosen interpretation');
+
+    const eastPair = [{ size: 2, suit: SUITS.WINDS, val: 'E', isRelative: false }];
+    const deadEasts = [801, 802, 803].map(id => ({ id, suit: SUITS.WINDS, val: 'E' }));
+    assert(getHandFit(eastPair, [], [], deadEasts).blocked, 'A natural pair must become unreachable when too many copies are visibly dead');
+} catch (e) {
+    assert(false, `Learner-focused co-pilot ranking failed: ${e.message}`);
 }
 
 // 3b. Structural difficulty is independent of current collection progress.
@@ -270,9 +306,12 @@ try {
     assert(missingRegistryNames.length === 0, `Every app element reference must be registered${missingRegistryNames.length ? `: ${missingRegistryNames.join(', ')}` : ''}`);
     assert(!css.includes('.claim-tile-announcement span'), 'Claim prompt styles must not override nested tile labels');
     assert(html.includes('co-pilot-color-key') && css.includes('--pattern-suit-a'), 'Co-pilot and card reference must include the relative-suit color key');
+    assert(html.includes('co-pilot-guidance-key') && css.includes('.tile.copilot-keep') && css.includes('.tile.copilot-discard'), 'Co-pilot must explain and render keep/discard rack guidance');
+    assert(app.includes('visibleDeadTiles()') && ui.includes('Pinned Path'), 'Co-pilot must use visible dead tiles and keep pinned paths stable');
     assert(css.includes('.discard-river {\n    position: absolute;') && css.includes('.table-center {') && css.includes('overscroll-behavior: contain'), 'Discard river must scroll without contributing to mobile board height');
     assert(ui.includes("W: 'White Dragon (Soap)'") && ui.includes('tile-caption">SOAP'), 'White Dragon must render and read as Soap');
     assert(css.includes('body.charleston-active .game-header') && css.includes('.tile-exposed.joker-exchange'), 'Charleston header access and highlighted Joker exchanges must remain styled');
+    assert(css.includes('body.charleston-active .seat-bottom > * { pointer-events: auto; }'), 'Charleston controls must remain tappable while the co-pilot is open');
     assert(ui.includes("tileEl.setAttribute('title', getTileLabel(tile.suit, tile.val))"), 'Discarded tiles must expose readable tile names');
     assert(ui.includes("winnerName === 'You' ? 'You Win!'") && !ui.includes("`${result.winnerName || 'Player'} Wins!`"), 'Round result must use second-person winner grammar');
     assert(app.includes("elements.roundResultOverlay.classList.add('hidden')") && app.indexOf("switchScreen(elements.lobbyScreen)") < app.lastIndexOf('await leaveRoom'), 'Exit to Lobby must hide the result and switch screens before remote cleanup');

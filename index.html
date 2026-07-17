@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>American Mahjong PWA</title>
-    <link rel="stylesheet" href="style.css?v=22">
+    <link rel="stylesheet" href="style.css?v=23">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -201,6 +201,10 @@
                             <span class="pattern-key pattern-suit-c">Suit C</span>
                             <span class="pattern-key pattern-suit-honor">Suitless</span>
                         </div>
+                        <div class="co-pilot-guidance-key" aria-label="Rack guidance key">
+                            <span><i class="guidance-swatch guidance-keep"></i> Helps target</span>
+                            <span><i class="guidance-swatch guidance-discard"></i> Consider passing or discarding</span>
+                        </div>
                         <div class="co-pilot-suggestions" id="co-pilot-suggestions">
                             <!-- Suggestions injected dynamically -->
                         </div>
@@ -389,6 +393,6 @@
     </div>
 
     <!-- Scripts -->
-    <script type="module" src="js/app.js?v=20"></script>
+    <script type="module" src="js/app.js?v=21"></script>
 </body>
 </html>

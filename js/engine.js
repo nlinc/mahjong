@@ -546,10 +546,9 @@ function tryMatchCombination(reqGroups, freq, availableJokers, baseVal, suitMap)
     const freqCopy = { ...freq };
     let jokersLeft = availableJokers;
 
-    // First pass: Satisfy groups of size 1 (singles) and size 2 (pairs).
-    // Jokers CANNOT be used to satisfy size 1 or size 2!
+    // First pass: Satisfy natural-only singles, pairs, and Flowers.
     for (const g of reqGroups) {
-        if (g.size <= 2) {
+        if (g.size <= 2 || g.suit === SUITS.FLOWERS) {
             const actualTileKey = getActualTileKey(g, baseVal, suitMap);
             const count = freqCopy[actualTileKey] || 0;
             if (count < g.size) {
@@ -562,7 +561,7 @@ function tryMatchCombination(reqGroups, freq, availableJokers, baseVal, suitMap)
     // Second pass: Satisfy groups of size >= 3 (pungs, kongs, quints, sextets).
     // Jokers CAN be used here.
     for (const g of reqGroups) {
-        if (g.size > 2) {
+        if (g.size > 2 && g.suit !== SUITS.FLOWERS) {
             const actualTileKey = getActualTileKey(g, baseVal, suitMap);
             const count = freqCopy[actualTileKey] || 0;
             
@@ -636,66 +635,51 @@ function exposuresFitGroups(groups, exposures, baseVal, suitMap) {
 }
 
 
+function getHandInterpretations(groups) {
+    const numericSuits = [SUITS.DOTS, SUITS.BAMS, SUITS.CRAKES];
+    const needsRelVal = groups.some(group => group.isRelative);
+    const baseValOptions = needsRelVal ? [1, 2, 3, 4, 5, 6, 7, 8, 9] : [0];
+    const suitVars = [...new Set(groups.map(g => g.suit).filter(s => s === 'A' || s === 'B' || s === 'C'))];
+    if (suitVars.length === 0) return { baseValOptions, suitMappings: [{}] };
+    const suitMappings = [];
+    if (suitVars.length === 1) {
+        for (const suit of numericSuits) suitMappings.push({ [suitVars[0]]: suit });
+    } else if (suitVars.length === 2) {
+        for (const first of numericSuits) {
+            for (const second of numericSuits) {
+                if (first !== second) {
+                    suitMappings.push({ [suitVars[0]]: first, [suitVars[1]]: second });
+                }
+            }
+        }
+    } else {
+        for (const first of numericSuits) {
+            for (const second of numericSuits) {
+                for (const third of numericSuits) {
+                    if (first !== second && first !== third && second !== third) {
+                        suitMappings.push({ [suitVars[0]]: first, [suitVars[1]]: second, [suitVars[2]]: third });
+                    }
+                }
+            }
+        }
+    }
+    return { baseValOptions, suitMappings };
+}
+
+function interpretationIsInRange(groups, baseVal) {
+    return groups.every(group => !group.isRelative ||
+        (baseVal + group.relOffset >= 1 && baseVal + group.relOffset <= 9));
+}
+
 // Generalized Hand Matching Scoring (returns matchCount out of 14)
 export function getHandScore(groups, tiles, exposures = []) {
     const { freq, jokers } = getTileFrequencies(tiles);
-    const numericSuits = [SUITS.DOTS, SUITS.BAMS, SUITS.CRAKES];
-    
-    let needsRelVal = false;
-    for (const g of groups) {
-        if (g.isRelative) {
-            needsRelVal = true;
-            break;
-        }
-    }
+    const { baseValOptions, suitMappings } = getHandInterpretations(groups);
 
-    const baseValOptions = needsRelVal ? [1, 2, 3, 4, 5, 6, 7, 8, 9] : [0];
-    const suitVars = [...new Set(groups.map(g => g.suit).filter(s => s === 'A' || s === 'B' || s === 'C'))];
-
-    function getSuitMappings() {
-        if (suitVars.length === 0) return [{}];
-        const mappings = [];
-        if (suitVars.length === 1) {
-            for (const s of numericSuits) {
-                mappings.push({ [suitVars[0]]: s });
-            }
-        } else if (suitVars.length === 2) {
-            for (const s1 of numericSuits) {
-                for (const s2 of numericSuits) {
-                    if (s1 !== s2) {
-                        mappings.push({ [suitVars[0]]: s1, [suitVars[1]]: s2 });
-                    }
-                }
-            }
-        } else if (suitVars.length === 3) {
-            for (const s1 of numericSuits) {
-                for (const s2 of numericSuits) {
-                    for (const s3 of numericSuits) {
-                        if (s1 !== s2 && s1 !== s3 && s2 !== s3) {
-                            mappings.push({ [suitVars[0]]: s1, [suitVars[1]]: s2, [suitVars[2]]: s3 });
-                        }
-                    }
-                }
-            }
-        }
-        return mappings;
-    }
-
-    const suitMappings = getSuitMappings();
     let maxMatchCount = 0;
 
     for (const baseVal of baseValOptions) {
-        let rangeValid = true;
-        for (const g of groups) {
-            if (g.isRelative) {
-                const val = baseVal + g.relOffset;
-                if (val < 1 || val > 9) {
-                    rangeValid = false;
-                    break;
-                }
-            }
-        }
-        if (!rangeValid) continue;
+        if (!interpretationIsInRange(groups, baseVal)) continue;
 
         for (const suitMap of suitMappings) {
             if (!exposuresFitGroups(groups, exposures, baseVal, suitMap)) continue;
@@ -709,14 +693,117 @@ export function getHandScore(groups, tiles, exposures = []) {
     return maxMatchCount;
 }
 
+function buildFitRequirements(groups, baseVal, suitMap) {
+    const requirements = new Map();
+    for (const group of groups) {
+        const key = getActualTileKey(group, baseVal, suitMap);
+        const actualSuit = key.slice(0, key.lastIndexOf('_'));
+        const requirement = requirements.get(key) || {
+            key,
+            total: 0,
+            naturalOnly: 0,
+            available: actualSuit === SUITS.FLOWERS ? 8 : 4
+        };
+        requirement.total += group.size;
+        // Flowers are always natural tiles even when a card shows three or more.
+        if (group.size <= 2 || actualSuit === SUITS.FLOWERS) requirement.naturalOnly += group.size;
+        requirements.set(key, requirement);
+    }
+    return [...requirements.values()];
+}
+
+function evaluateHandFit(groups, tiles, visibleDeadTiles, baseVal, suitMap) {
+    const requirements = buildFitRequirements(groups, baseVal, suitMap);
+    const naturalTilesByKey = new Map();
+    const jokers = [];
+    for (const tile of tiles) {
+        if (tile.suit === SUITS.JOKERS) jokers.push(tile);
+        else {
+            const key = `${tile.suit}_${tile.val}`;
+            if (!naturalTilesByKey.has(key)) naturalTilesByKey.set(key, []);
+            naturalTilesByKey.get(key).push(tile);
+        }
+    }
+    const deadCounts = {};
+    for (const tile of visibleDeadTiles || []) {
+        if (!tile || tile.suit === SUITS.JOKERS) continue;
+        const key = `${tile.suit}_${tile.val}`;
+        deadCounts[key] = (deadCounts[key] || 0) + 1;
+    }
+
+    let matchCount = 0;
+    let missingNaturalOnly = 0;
+    let deadTileRisk = 0;
+    let blocked = false;
+    let openMeldSlots = 0;
+    const keepTileIds = [];
+
+    for (const requirement of requirements) {
+        const heldTiles = naturalTilesByKey.get(requirement.key) || [];
+        const naturalUsed = Math.min(heldTiles.length, requirement.total);
+        keepTileIds.push(...heldTiles.slice(0, naturalUsed).map(tile => tile.id));
+        matchCount += naturalUsed;
+
+        const naturalOnlyFilled = Math.min(naturalUsed, requirement.naturalOnly);
+        const naturalOnlyGap = requirement.naturalOnly - naturalOnlyFilled;
+        missingNaturalOnly += naturalOnlyGap;
+
+        const dead = Math.min(deadCounts[requirement.key] || 0, requirement.available);
+        const remainingNaturals = Math.max(0, requirement.available - heldTiles.length - dead);
+        if (naturalOnlyGap > remainingNaturals) blocked = true;
+        else if (naturalOnlyGap > 0) {
+            const spareOuts = remainingNaturals - naturalOnlyGap;
+            if (spareOuts === 0) deadTileRisk += naturalOnlyGap;
+            else if (spareOuts === 1) deadTileRisk += naturalOnlyGap * 0.5;
+        }
+
+        const meldNaturalUsed = Math.max(0, naturalUsed - naturalOnlyFilled);
+        openMeldSlots += Math.max(0, requirement.total - requirement.naturalOnly - meldNaturalUsed);
+    }
+
+    const jokersUsed = Math.min(jokers.length, openMeldSlots);
+    keepTileIds.push(...jokers.slice(0, jokersUsed).map(tile => tile.id));
+    matchCount += jokersUsed;
+
+    return {
+        matchCount,
+        keepTileIds,
+        missingNaturalOnly,
+        deadTileRisk,
+        blocked,
+        openSlots: Math.max(0, 14 - matchCount),
+        baseVal,
+        suitMap
+    };
+}
+
+// Finds the strategically strongest concrete suit/number interpretation for a
+// pattern and returns the rack tile IDs that support it. Visible discards and
+// opponents' exposures can disqualify natural-only singles/pairs.
+export function getHandFit(groups, tiles, exposures = [], visibleDeadTiles = []) {
+    const { baseValOptions, suitMappings } = getHandInterpretations(groups);
+    let bestFit = null;
+    for (const baseVal of baseValOptions) {
+        if (!interpretationIsInRange(groups, baseVal)) continue;
+        for (const suitMap of suitMappings) {
+            if (!exposuresFitGroups(groups, exposures, baseVal, suitMap)) continue;
+            const fit = evaluateHandFit(groups, tiles, visibleDeadTiles, baseVal, suitMap);
+            const quality = (fit.blocked ? -10000 : 0) + (fit.matchCount * 100) -
+                (fit.deadTileRisk * 10) - fit.missingNaturalOnly;
+            if (!bestFit || quality > bestFit.quality) bestFit = { ...fit, quality };
+        }
+    }
+    return bestFit;
+}
+
 function evalCombinationScore(reqGroups, freq, availableJokers, baseVal, suitMap) {
     const freqCopy = { ...freq };
     let jokersLeft = availableJokers;
     let matchCount = 0;
 
-    // First pass: Satisfy size 1 and 2 groups (no Jokers allowed)
+    // First pass: Satisfy natural-only singles, pairs, and Flowers.
     for (const g of reqGroups) {
-        if (g.size <= 2) {
+        if (g.size <= 2 || g.suit === SUITS.FLOWERS) {
             const actualTileKey = getActualTileKey(g, baseVal, suitMap);
             const count = freqCopy[actualTileKey] || 0;
             const naturalUsed = Math.min(count, g.size);
@@ -727,7 +814,7 @@ function evalCombinationScore(reqGroups, freq, availableJokers, baseVal, suitMap
 
     // Second pass: Satisfy size >= 3 groups (Jokers allowed)
     for (const g of reqGroups) {
-        if (g.size > 2) {
+        if (g.size > 2 && g.suit !== SUITS.FLOWERS) {
             const actualTileKey = getActualTileKey(g, baseVal, suitMap);
             const count = freqCopy[actualTileKey] || 0;
             const naturalUsed = Math.min(count, g.size);
@@ -835,8 +922,33 @@ export function getHandDifficulty(groups, isConcealed = false) {
     };
 }
 
-// Evaluate completion percentages for all card hands based on hand tiles
-export function analyzeHandStrengths(hand, exposures = []) {
+const DIFFICULTY_TILE_PENALTIES = {
+    Easy: 0,
+    Moderate: 0.5,
+    Hard: 1.5,
+    Expert: 2.5,
+    Extreme: 3.5
+};
+
+function getRecommendationReason(difficulty, fit) {
+    const reasons = [];
+    if (difficulty.level === 'Easy') reasons.push('flexible beginner-friendly path');
+    else if (difficulty.level === 'Moderate') reasons.push('manageable with some exact tiles');
+    else if (difficulty.level === 'Hard') reasons.push('harder pattern—needs a stronger lead');
+    else reasons.push(`${difficulty.level.toLowerCase()} pattern—keep only with a clear lead`);
+    if (fit.missingNaturalOnly) {
+        reasons.push(`${fit.missingNaturalOnly} natural single/pair tile${fit.missingNaturalOnly === 1 ? '' : 's'} still needed`);
+    } else if (difficulty.interpretations >= 6) {
+        reasons.push(`${difficulty.interpretations} suit/number variations`);
+    }
+    if (fit.deadTileRisk) reasons.push('needed natural tiles are getting scarce');
+    return reasons.join(' · ');
+}
+
+// Evaluate learner-focused attainability for all card hands. Raw percentage is
+// preserved, but recommendationScore makes harder patterns earn their place by
+// being meaningfully closer than flexible Easy or Moderate options.
+export function analyzeHandStrengths(hand, exposures = [], visibleDeadTiles = []) {
     const results = [];
     const exposedTiles = exposures.flat();
     const completeTiles = [...hand, ...exposedTiles];
@@ -848,9 +960,13 @@ export function analyzeHandStrengths(hand, exposures = []) {
             // Keep impossible custom patterns visible on the card (where they
             // are labelled), but never recommend them as a playable target.
             if (difficulty.impossible) continue;
-            const matchCount = getHandScore(item.groups, completeTiles, exposures);
+            const fit = getHandFit(item.groups, completeTiles, exposures, visibleDeadTiles);
+            if (!fit || fit.blocked) continue;
+            const matchCount = fit.matchCount;
             if (exposedTiles.length > 0 && matchCount === 0) continue;
             const percentage = Math.round((matchCount / 14) * 100);
+            const difficultyPenalty = DIFFICULTY_TILE_PENALTIES[difficulty.level] ?? 4;
+            const recommendationScore = matchCount - difficultyPenalty - (fit.deadTileRisk * 0.75);
             results.push({
                 id: item.id,
                 display: item.display,
@@ -859,15 +975,46 @@ export function analyzeHandStrengths(hand, exposures = []) {
                 percentage,
                 matchCount,
                 difficulty,
-                groups: item.groups
+                groups: item.groups,
+                isConcealed: Boolean(item.isConcealed),
+                fit,
+                recommendationScore,
+                recommendationReason: getRecommendationReason(difficulty, fit)
             });
         }
     }
 
-    // Progress is primary; when two targets have equal progress, recommend the
-    // more attainable pattern first instead of relying on card order.
-    results.sort((a, b) => b.percentage - a.percentage || a.difficulty.score - b.difficulty.score);
+    results.sort((a, b) => b.recommendationScore - a.recommendationScore ||
+        b.matchCount - a.matchCount || a.difficulty.score - b.difficulty.score);
     return results;
+}
+
+// The panel deliberately shows different strategic lenses instead of three
+// near-identical percentage leaders. Duplicate hands combine their role labels.
+export function selectCoPilotRecommendations(results, limit = 3) {
+    if (!results?.length || limit <= 0) return [];
+    const learnerRanked = [...results].sort((a, b) =>
+        b.recommendationScore - a.recommendationScore || b.matchCount - a.matchCount);
+    const closestRanked = [...results].sort((a, b) =>
+        b.matchCount - a.matchCount || a.difficulty.score - b.difficulty.score);
+    const easierRanked = learnerRanked.filter(item =>
+        item.difficulty.level === 'Easy' || item.difficulty.level === 'Moderate');
+    const roleCandidates = [
+        { role: 'Best Path', item: learnerRanked[0] },
+        { role: 'Closest', item: closestRanked[0] },
+        { role: easierRanked.length ? 'Easiest Viable' : 'Easiest Available', item: easierRanked[0] || [...results].sort((a, b) => a.difficulty.score - b.difficulty.score || b.matchCount - a.matchCount)[0] }
+    ];
+    const selected = new Map();
+    for (const { role, item } of roleCandidates) {
+        if (!item) continue;
+        if (!selected.has(item.id)) selected.set(item.id, { ...item, roles: [] });
+        selected.get(item.id).roles.push(role);
+    }
+    for (const item of learnerRanked) {
+        if (selected.size >= limit) break;
+        if (!selected.has(item.id)) selected.set(item.id, { ...item, roles: ['Alternative'] });
+    }
+    return [...selected.values()].slice(0, limit);
 }
 
 // Check if hand declared Mahjong matches ANY card hand

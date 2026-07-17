@@ -1,4 +1,4 @@
-import { SUITS, HANDS_CARD, CARD_CATEGORIES, analyzeHandStrengths, getHandDifficulty, saveCustomHand, deleteCustomHand } from './engine.js?v=13';
+import { SUITS, HANDS_CARD, CARD_CATEGORIES, analyzeHandStrengths, selectCoPilotRecommendations, getHandDifficulty, saveCustomHand, deleteCustomHand } from './engine.js?v=14';
 
 // DOM selectors
 export const elements = {
@@ -451,6 +451,7 @@ export function renderCharlestonStep(step, selectedTiles, onTileRemove, onConfir
 }
 
 let latestHandStrengths = []; // Cache of the latest analysis
+let pinnedCoPilotId = null;
 let openCardCategory = null;
 
 function escapeHtml(value) {
@@ -599,7 +600,41 @@ export function showCardPattern(category, handId) {
     }
 }
 
-export function renderCoPilotSuggestions(hand, exposures = []) {
+export function clearCoPilotGuidance() {
+    elements.playerTileRack.querySelectorAll('.tile').forEach(tile => {
+        tile.classList.remove('copilot-keep', 'copilot-discard');
+        tile.removeAttribute('data-copilot-guidance');
+    });
+}
+
+export function resetCoPilotTarget() {
+    pinnedCoPilotId = null;
+    clearCoPilotGuidance();
+}
+
+function applyCoPilotGuidance(target, hand) {
+    clearCoPilotGuidance();
+    if (!target?.fit) return;
+    const keepIds = new Set(target.fit.keepTileIds);
+    const handById = new Map(hand.map(tile => [String(tile.id), tile]));
+    elements.playerTileRack.querySelectorAll('.tile').forEach(tileElement => {
+        const tile = handById.get(tileElement.getAttribute('data-id'));
+        if (!tile) return;
+        if (keepIds.has(tile.id)) {
+            tileElement.classList.add('copilot-keep');
+            tileElement.setAttribute('data-copilot-guidance', 'Helps target');
+        } else if (tile.suit !== SUITS.JOKERS) {
+            tileElement.classList.add('copilot-discard');
+            tileElement.setAttribute('data-copilot-guidance', 'Consider passing or discarding');
+        }
+    });
+}
+
+function openCoPilotPattern(item) {
+    showCardPattern(item.category, item.id);
+}
+
+export function renderCoPilotSuggestions(hand, exposures = [], visibleDeadTiles = []) {
     if (!hand || hand.length === 0) return;
     if (!elements.coPilotSuggestions) {
         console.warn("Co-pilot suggestions container not found in DOM.");
@@ -607,7 +642,7 @@ export function renderCoPilotSuggestions(hand, exposures = []) {
     }
     
     // Analyze hand strengths
-    latestHandStrengths = analyzeHandStrengths(hand, exposures);
+    latestHandStrengths = analyzeHandStrengths(hand, exposures, visibleDeadTiles);
     
     // Render top 3 suggestions in the Co-pilot panel
     elements.coPilotSuggestions.innerHTML = '';
@@ -617,44 +652,64 @@ export function renderCoPilotSuggestions(hand, exposures = []) {
         ? `🔒 Committed: only patterns compatible with ${exposures.length} exposed meld${exposures.length === 1 ? '' : 's'}`
         : '💡 Mahjong Co-pilot Suggestions';
     
-    // Display top 3
-    const top3 = latestHandStrengths.slice(0, 3);
-    if (!top3.length) {
+    let recommendations = selectCoPilotRecommendations(latestHandStrengths, 3);
+    const pinnedTarget = latestHandStrengths.find(item => item.id === pinnedCoPilotId);
+    if (pinnedCoPilotId && !pinnedTarget) pinnedCoPilotId = null;
+    if (pinnedTarget) {
+        const existingPinned = recommendations.find(item => item.id === pinnedTarget.id);
+        const pinnedRecommendation = {
+            ...(existingPinned || pinnedTarget),
+            roles: ['Pinned Path', ...(existingPinned?.roles || [])]
+        };
+        recommendations = [pinnedRecommendation, ...recommendations.filter(item => item.id !== pinnedTarget.id)].slice(0, 3);
+    }
+    const activeTarget = pinnedTarget || recommendations[0];
+    applyCoPilotGuidance(activeTarget, hand);
+
+    if (!recommendations.length) {
         const warning = document.createElement('p');
         warning.className = 'copilot-no-match';
-        warning.textContent = 'No card patterns are compatible with the exposed tiles. This meld may be invalid.';
+        warning.textContent = visibleDeadTiles.length
+            ? 'No reachable card patterns remain with the exposed and discarded tiles.'
+            : 'No card patterns are compatible with the exposed tiles. This meld may be invalid.';
         elements.coPilotSuggestions.appendChild(warning);
+        clearCoPilotGuidance();
         return;
     }
-    top3.forEach(item => {
+    recommendations.forEach(item => {
         const isHigh = item.percentage >= 50;
-        const card = document.createElement('div');
-        card.className = `copilot-suggestion-card${isHigh ? ' high-match' : ''}`;
+        const isPinned = item.id === pinnedCoPilotId;
+        const isActive = item.id === activeTarget?.id;
+        const card = document.createElement('article');
+        card.className = `copilot-suggestion-card${isHigh ? ' high-match' : ''}${isActive ? ' active-target' : ''}${isPinned ? ' pinned-target' : ''}`;
         
         let catText = item.category.toUpperCase().replace('_', ' ');
         if (catText.startsWith('NUM ')) catText = catText.replace('NUM ', '');
 
         card.innerHTML = `
-            <div class="copilot-pattern" title="${escapeHtml(item.desc)}" aria-label="${escapeHtml(item.display)}">${renderPatternMarkup(item)}</div>
-            <div class="copilot-info">
-                <span>${catText}</span>
-                <span class="copilot-metrics">
-                    <span class="difficulty-badge difficulty-${item.difficulty.level.toLowerCase()}" title="${escapeHtml(`${item.difficulty.level}: ${item.difficulty.reason}`)}">${escapeHtml(item.difficulty.level)}</span>
-                    <span class="copilot-pct" title="${item.matchCount} of 14 tiles collected">${item.matchCount}/14 · ${item.percentage}%</span>
-                </span>
+            <div class="copilot-role-row">
+                <span class="copilot-role">${escapeHtml(item.roles.join(' · '))}</span>
+                ${isPinned ? '<span class="copilot-pinned">📌 Pinned</span>' : ''}
             </div>
+            <button type="button" class="copilot-target-button" aria-pressed="${isPinned}" aria-label="${isPinned ? 'Unpin' : 'Use'} ${escapeHtml(item.desc)}">
+                <span class="copilot-pattern" title="${escapeHtml(item.desc)}">${renderPatternMarkup(item)}</span>
+                <span class="copilot-info">
+                    <span>${catText}</span>
+                    <span class="copilot-metrics">
+                        <span class="difficulty-badge difficulty-${item.difficulty.level.toLowerCase()}" title="${escapeHtml(`${item.difficulty.level}: ${item.difficulty.reason}`)}">${escapeHtml(item.difficulty.level)}</span>
+                        <span class="copilot-pct" title="${item.matchCount} of 14 tiles collected">${item.matchCount}/14 · ${item.percentage}%</span>
+                    </span>
+                </span>
+                <span class="copilot-why">${escapeHtml(item.recommendationReason)}</span>
+                <span class="copilot-pin-action">${isPinned ? 'Tap to unpin' : isActive ? 'Pin this path' : 'Use this path'}</span>
+            </button>
+            <button type="button" class="copilot-view-button">View on card</button>
         `;
-        
-        card.addEventListener('click', () => {
-            toggleOverlay(elements.cardOverlay, true);
-            const tabBtn = document.querySelector(`.card-viewer-modal .tab-btn[data-category="${item.category}"]`);
-            if (tabBtn) {
-                tabBtn.click();
-                // Ensure the category tab is scrolled into view in horizontal list
-                tabBtn.scrollIntoView({ behavior: 'smooth', inline: 'center' });
-            }
+        card.querySelector('.copilot-target-button').addEventListener('click', () => {
+            pinnedCoPilotId = isPinned ? null : item.id;
+            renderCoPilotSuggestions(hand, exposures, visibleDeadTiles);
         });
-        
+        card.querySelector('.copilot-view-button').addEventListener('click', () => openCoPilotPattern(item));
         elements.coPilotSuggestions.appendChild(card);
     });
 }
