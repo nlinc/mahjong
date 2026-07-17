@@ -12,6 +12,8 @@
       "firestore.rules",
       "firestore.indexes.json",
       "check.mjs",
+      "*.md",
+      "**/*.md",
       ".git/**",
       ".firebase/**",
       ".firebaserc",
