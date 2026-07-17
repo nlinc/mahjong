@@ -2,14 +2,34 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /rooms/{roomId} {
+      function validPlayer(player, seat) {
+        return player is map
+          && player.keys().hasAll(['id', 'name', 'isHost', 'active', 'seat'])
+          && player.keys().hasOnly(['id', 'name', 'isHost', 'active', 'seat', 'isBot'])
+          && player.id is string
+          && player.id.size() >= 2
+          && player.id.size() <= 12
+          && player.name is string
+          && player.name.size() >= 1
+          && player.name.size() <= 26
+          && player.isHost is bool
+          && player.active is bool
+          && player.seat == seat
+          && (!player.keys().hasAny(['isBot']) || player.isBot is bool);
+      }
+
       function validRoom(data) {
         return data.keys().hasOnly(['roomId', 'status', 'players', 'gameState'])
           && data.roomId == roomId
-          && roomId.size() == 5
+          && roomId.matches('^[A-Z0-9]{5}$')
           && data.status in ['lobby', 'charleston', 'playing', 'ended']
           && data.players is list
           && data.players.size() >= 1
           && data.players.size() <= 4
+          && validPlayer(data.players[0], 0)
+          && (data.players.size() < 2 || validPlayer(data.players[1], 1))
+          && (data.players.size() < 3 || validPlayer(data.players[2], 2))
+          && (data.players.size() < 4 || validPlayer(data.players[3], 3))
           && data.gameState is map
           && data.gameState.keys().hasOnly([
             'wall', 'hands', 'exposures', 'discards', 'currentTurn',
@@ -17,16 +37,36 @@ service cloud.firestore {
             'charlestonPasses', 'selectedTileId', 'gamePhase', 'winnerMessage',
             'lastActionTime', 'lastClaimUndo', 'roundResult', 'canExchangeJoker'
           ])
+          && data.gameState.keys().hasAll([
+            'wall', 'exposures', 'discards', 'currentTurn', 'charlestonStep',
+            'charlestonPasses', 'lastActionTime'
+          ])
+          && data.gameState.wall is list
+          && data.gameState.wall.size() <= 152
+          && (!data.gameState.keys().hasAny(['hands']) || data.gameState.hands is map)
+          && data.gameState.exposures is map
           && data.gameState.discards is list
           && data.gameState.discards.size() <= 152
           && data.gameState.currentTurn is int
           && data.gameState.currentTurn >= 0
           && data.gameState.currentTurn <= 3
+          && data.gameState.charlestonStep is int
+          && data.gameState.charlestonStep >= 0
+          && data.gameState.charlestonStep <= 6
+          && data.gameState.charlestonPasses is map
+          && data.gameState.lastActionTime is int
+          && (!data.gameState.keys().hasAny(['gamePhase'])
+            || data.gameState.gamePhase in ['charleston', 'playing', 'gameover'])
+          && (!data.gameState.keys().hasAny(['winnerMessage'])
+            || data.gameState.winnerMessage == null
+            || (data.gameState.winnerMessage is string
+              && data.gameState.winnerMessage.size() <= 200))
           && (!data.gameState.keys().hasAny(['canExchangeJoker'])
             || data.gameState.canExchangeJoker is bool);
       }
 
       // Short room codes are intentionally readable for link-based family play.
+      // There is no account sign-in: possession of the room code is the trust boundary.
       // Writes are restricted to the exact room schema and immutable room ID.
       allow read: if true;
       allow create: if validRoom(request.resource.data);

@@ -187,6 +187,23 @@ body {
     margin-top: 10px;
 }
 
+.btn:disabled {
+    opacity: 0.42;
+    cursor: not-allowed;
+    box-shadow: none;
+    filter: saturate(0.55);
+    transform: none;
+}
+
+.btn:focus-visible,
+.btn-text:focus-visible,
+.btn-close:focus-visible,
+.copy-hint:focus-visible,
+.tab-btn:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 3px;
+}
+
 /* LOBBY / SETUP SCREEN */
 #lobby-screen {
     justify-content: center;
@@ -369,12 +386,19 @@ body {
 }
 
 .copy-hint {
+    width: fit-content;
+    margin: 4px auto 0;
+    padding: 4px 6px;
+    border: 0;
+    background: transparent;
+    font-family: 'Outfit', sans-serif;
     font-size: 0.75rem;
     color: var(--text-muted);
     cursor: pointer;
     display: block;
-    margin-top: 4px;
 }
+
+.copy-hint:hover { color: var(--text-main); }
 
 .players-list-box {
     text-align: left;

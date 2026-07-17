@@ -781,7 +781,7 @@ function performBotTurn(state, seat, players) {
 
 /* Multiplayer lobby and room synchronization */
 async function handleCreateRoom() {
-    const roomCode = Math.random().toString(36).slice(2, 7).toUpperCase();
+    const roomCode = generateRoomCode();
     appState.mode = 'multi';
     appState.playerName = 'Host';
     appState.roomId = roomCode;
@@ -825,6 +825,12 @@ async function handleJoinRoom() {
         elements.btnJoinRoom.disabled = false;
         elements.btnJoinRoom.textContent = 'Confirm & Join';
     }
+}
+
+function generateRoomCode() {
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const randomValues = crypto.getRandomValues(new Uint8Array(5));
+    return Array.from(randomValues, value => alphabet[value % alphabet.length]).join('');
 }
 
 function handleRoomStateUpdate(room) {

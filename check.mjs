@@ -255,6 +255,7 @@ try {
     const ui = readFileSync(new URL('./js/ui.js', import.meta.url), 'utf8');
     const app = readFileSync(new URL('./js/app.js', import.meta.url), 'utf8');
     const css = readFileSync(new URL('./style.css', import.meta.url), 'utf8');
+    const firestoreRules = readFileSync(new URL('./firestore.rules', import.meta.url), 'utf8');
     const htmlIds = [...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
     const duplicateIds = htmlIds.filter((id, index) => htmlIds.indexOf(id) !== index);
     assert(duplicateIds.length === 0, `HTML IDs must be unique${duplicateIds.length ? `: ${duplicateIds.join(', ')}` : ''}`);
@@ -275,6 +276,13 @@ try {
     assert(ui.includes("tileEl.setAttribute('title', getTileLabel(tile.suit, tile.val))"), 'Discarded tiles must expose readable tile names');
     assert(ui.includes("winnerName === 'You' ? 'You Win!'") && !ui.includes("`${result.winnerName || 'Player'} Wins!`"), 'Round result must use second-person winner grammar');
     assert(app.includes("elements.roundResultOverlay.classList.add('hidden')") && app.indexOf("switchScreen(elements.lobbyScreen)") < app.lastIndexOf('await leaveRoom'), 'Exit to Lobby must hide the result and switch screens before remote cleanup');
+    assert(html.includes('<button type="button" class="copy-hint" id="btn-copy-code">'), 'Copy Share Link must be a keyboard-accessible button');
+    assert(html.includes('<label for="num-blind-count">Tiles to pass blindly:</label>'), 'Blind-pass count must have a programmatic label');
+    assert(html.includes('aria-label="Close practice card"') && html.includes('aria-label="Close how-to guide"'), 'Icon-only close buttons must have descriptive labels');
+    assert(css.includes('.btn:disabled'), 'Disabled buttons must have a visible disabled state');
+    assert(app.includes('crypto.getRandomValues(new Uint8Array(5))'), 'Multiplayer room codes must use cryptographic randomness');
+    assert(firestoreRules.includes("roomId.matches('^[A-Z0-9]{5}$')"), 'Firestore must enforce the five-character room-code format');
+    assert(firestoreRules.includes('function validPlayer(player, seat)'), 'Firestore must validate player records');
 } catch (e) {
     assert(false, `DOM contract checks failed: ${e.message}`);
 }

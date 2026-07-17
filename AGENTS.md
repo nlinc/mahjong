@@ -51,8 +51,9 @@ a build system, bundler, or framework unless explicitly asked.
     support used alongside `HANDS_CARD` in `engine.js`.
 - PWA: `manifest.json` (icons, standalone display) + `sw.js` (network-first
   service worker; cache-busts via `CACHE_NAME` and the `?v=N` query strings
-  on script/style tags in `index.html` — bump both together when you change
-  a cached file, or phones will keep serving the stale one).
+  in `index.html` or a parent module import — bump the importing reference and
+  matching `sw.js` entry together when you change a cached file, or phones
+  will keep serving the stale one).
 - Firebase config: `firebase.json` (Hosting rewrites/headers, Firestore rules
   path), `.firebaserc` (project alias), `firestore.rules` (room schema +
   read/write validation for the `rooms/{roomId}` collection — short, readable
@@ -116,13 +117,19 @@ If you add a `package.json` for any reason, wire `node check.mjs` up as
 - **Keep the `elements` registry and cache-bust versions in sync.** Adding a
   DOM id to `index.html` that `js/ui.js`/`js/app.js` needs requires adding it
   to the `elements` registry in `js/ui.js` too, or `check.mjs` fails. Changing
-  a cached file's contents means bumping its `?v=N` in `index.html` and the
-  matching entry (plus `CACHE_NAME`) in `sw.js`.
+  a cached file's contents means bumping its `?v=N` at the importing reference
+  (`index.html` or its parent module), the matching entry in `sw.js`, and
+  `CACHE_NAME`.
 - **Firestore rules must match `js/firebase.js`'s room shape.** `gameState`
   is an allow-listed key set in `firestore.rules` — adding a new field to the
   room's `gameState` in code requires adding it to `validRoom()`'s
   `hasOnly([...])` list too, or writes will be rejected in production (won't
   show up locally against the localStorage fallback).
+- **Multiplayer is code-trusted, not private.** There is intentionally no
+  Firebase Authentication so family members can join without accounts. A room
+  code is therefore a shared capability: anyone holding it can read and act in
+  that room. Do not present multiplayer as suitable for public or competitive
+  play without adding authentication and separating private player state.
 - **Firebase client config is public, not secret** — fine to keep in
   `js/firebase.js`. Don't add API secrets, service-account keys, or anything
   requiring server-side auth; this app has no backend beyond Hosting +

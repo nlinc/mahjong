@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>American Mahjong PWA</title>
-    <link rel="stylesheet" href="style.css?v=21">
+    <link rel="stylesheet" href="style.css?v=22">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -71,7 +71,7 @@
                 <div class="room-code-display">
                     <p>Room Code</p>
                     <h1 id="lobby-room-code">-----</h1>
-                    <span class="copy-hint" id="btn-copy-code">Copy Share Link 🔗</span>
+                    <button type="button" class="copy-hint" id="btn-copy-code">Copy Share Link 🔗</button>
                 </div>
 
                 <div class="players-list-box">
@@ -261,7 +261,7 @@
                             <span class="slider-round"></span> Enable Blind Pass
                         </label>
                         <div class="input-group blind-count-group hidden">
-                            <span>Tiles to pass blindly:</span>
+                            <label for="num-blind-count">Tiles to pass blindly:</label>
                             <input type="number" id="num-blind-count" min="1" max="3" value="1">
                         </div>
                     </div>
@@ -282,7 +282,7 @@
                         <h2>Lincoln Practice Card</h2>
                         <p class="card-subtitle"><span id="practice-hand-count">0</span> original practice hands · not an official annual card</p>
                     </div>
-                    <button id="btn-close-card" class="btn-close">✕</button>
+                    <button type="button" id="btn-close-card" class="btn-close" aria-label="Close practice card">✕</button>
                 </div>
                 <div class="modal-tabs">
                     <button class="tab-btn active" data-category="consec">Consec. Runs</button>
@@ -314,7 +314,7 @@
             <div class="guide-modal glass">
                 <div class="modal-header">
                     <h2>How to Play American Mahjong</h2>
-                    <button id="btn-close-guide" class="btn-close">✕</button>
+                    <button type="button" id="btn-close-guide" class="btn-close" aria-label="Close how-to guide">✕</button>
                 </div>
                 <div class="guide-content">
                     <h3>The Absolute Basics</h3>
@@ -389,6 +389,6 @@
     </div>
 
     <!-- Scripts -->
-    <script type="module" src="js/app.js?v=19"></script>
+    <script type="module" src="js/app.js?v=20"></script>
 </body>
 </html>
