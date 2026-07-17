@@ -58,6 +58,11 @@ a build system, bundler, or framework unless explicitly asked.
   path), `.firebaserc` (project alias), `firestore.rules` (room schema +
   read/write validation for the `rooms/{roomId}` collection — short, readable
   room codes are intentional for family link-sharing), `firestore.indexes.json`.
+- CI/CD: `.github/workflows/firebase-hosting-pull-request.yml` runs checks and
+  creates Firebase Hosting preview channels for same-repository pull requests;
+  `.github/workflows/firebase-hosting-merge.yml` runs checks and deploys the
+  repo root to the live Firebase Hosting channel on pushes to `main`. Both use
+  the `FIREBASE_SERVICE_ACCOUNT_MAHJONG_LINCOLN` GitHub Actions secret.
 - Tests: `check.mjs` — a single Node script (no test framework, no
   `package.json`). Run directly with `node check.mjs`. Covers engine unit
   tests (wall composition, hand matching, Charleston/claim/joker-exchange
@@ -76,7 +81,8 @@ node check.mjs
 ```
 
 This must print `📊 Test Summary: Passed N/N` with no `❌ FAIL` lines and
-exit 0. If you touch `index.html` ids, the `elements` registry in `js/ui.js`,
+exit 0. The Firebase Hosting GitHub workflows run this same command before
+preview or live deployment. If you touch `index.html` ids, the `elements` registry in `js/ui.js`,
 or anything `check.mjs` asserts on by literal string (e.g. specific CSS
 selectors, specific copy like the "Soap" dragon label), expect it to catch
 you — read the failing assertion message, it names the exact contract.
@@ -92,12 +98,12 @@ If you add a `package.json` for any reason, wire `node check.mjs` up as
 
 ## Guardrails
 
-- **Human owns the push.** Never run `git push` and never deploy. A push to
-  `main` auto-triggers the production Firebase Hosting deploy, so a push IS a
-  production release. Approval of the *work* ("looks good", "ship it") is NOT
-  permission to push. Push only on an explicit, literal instruction ("push to
-  main", "deploy this"). When done, commit locally, report the commit SHA(s),
-  and stop.
+- **Human owns production releases.** A push to `main` auto-triggers the live
+  Firebase Hosting workflow, so a push IS a production release. Never run
+  `git push` or `firebase deploy` without an explicit, literal instruction
+  ("push to main" or "deploy this"). Approval of the work ("looks good",
+  "ship it") is not release permission. When no release was explicitly
+  requested, commit locally, report the commit SHA(s), and stop.
 - **Surgical changes only.** Keep edits focused on the request. No unrelated
   refactoring, reformatting, or renaming across `js/engine.js`/`js/ui.js`/
   `js/app.js`.
