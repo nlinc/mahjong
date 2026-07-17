@@ -50,10 +50,11 @@ a build system, bundler, or framework unless explicitly asked.
   - `js/practice-card.js` — practice-card/custom-card helper data & rendering
     support used alongside `HANDS_CARD` in `engine.js`.
 - PWA: `manifest.json` (icons, standalone display) + `sw.js` (network-first
-  service worker; cache-busts via `CACHE_NAME` and the `?v=N` query strings
-  in `index.html` or a parent module import — bump the importing reference and
-  matching `sw.js` entry together when you change a cached file, or phones
-  will keep serving the stale one).
+  service worker; notifies open clients so `index.html` can offer a refresh
+  banner after an update). It cache-busts via `CACHE_NAME` and the `?v=N`
+  query strings in `index.html` or a parent module import — bump the importing
+  reference and matching `sw.js` entry together when you change a cached file,
+  or phones will keep serving the stale one.
 - Firebase config: `firebase.json` (Hosting rewrites/headers, Firestore rules
   path), `.firebaserc` (project alias), `firestore.rules` (room schema +
   read/write validation for the `rooms/{roomId}` collection — short, readable

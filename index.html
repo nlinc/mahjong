@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>American Mahjong PWA</title>
-    <link rel="stylesheet" href="style.css?v=23">
+    <link rel="stylesheet" href="style.css?v=24">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,6 +15,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
+    <div id="update-banner" class="update-banner hidden" role="status" aria-live="polite">
+        <span><strong>A fresh version is ready.</strong> Refresh to get the latest improvements.</span>
+        <div class="update-banner-actions">
+            <button id="btn-refresh-app" type="button" class="btn btn-sm btn-primary">Refresh now</button>
+            <button id="btn-dismiss-update" type="button" class="btn btn-sm btn-outline">Later</button>
+        </div>
+    </div>
     <div id="app-container">
         <!-- LOBBY / WELCOME SCREEN -->
         <section id="lobby-screen" class="screen active">
@@ -393,6 +400,6 @@
     </div>
 
     <!-- Scripts -->
-    <script type="module" src="js/app.js?v=21"></script>
+    <script type="module" src="js/app.js?v=22"></script>
 </body>
 </html>

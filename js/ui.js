@@ -5,6 +5,9 @@ export const elements = {
     lobbyScreen: document.getElementById('lobby-screen'),
     roomLobbyScreen: document.getElementById('room-lobby-screen'),
     gameScreen: document.getElementById('game-screen'),
+    updateBanner: document.getElementById('update-banner'),
+    btnRefreshApp: document.getElementById('btn-refresh-app'),
+    btnDismissUpdate: document.getElementById('btn-dismiss-update'),
     
     // Buttons
     btnSinglePlayer: document.getElementById('btn-single-player'),
@@ -609,7 +612,12 @@ export function clearCoPilotGuidance() {
 
 export function resetCoPilotTarget() {
     pinnedCoPilotId = null;
+    elements.btnToggleCopilot.classList.remove('has-pinned-target');
     clearCoPilotGuidance();
+}
+
+export function hasPinnedCoPilotTarget() {
+    return Boolean(pinnedCoPilotId);
 }
 
 function applyCoPilotGuidance(target, hand) {
@@ -655,6 +663,7 @@ export function renderCoPilotSuggestions(hand, exposures = [], visibleDeadTiles 
     let recommendations = selectCoPilotRecommendations(latestHandStrengths, 3);
     const pinnedTarget = latestHandStrengths.find(item => item.id === pinnedCoPilotId);
     if (pinnedCoPilotId && !pinnedTarget) pinnedCoPilotId = null;
+    elements.btnToggleCopilot.classList.toggle('has-pinned-target', Boolean(pinnedCoPilotId));
     if (pinnedTarget) {
         const existingPinned = recommendations.find(item => item.id === pinnedTarget.id);
         const pinnedRecommendation = {

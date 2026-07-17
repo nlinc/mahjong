@@ -10,8 +10,9 @@ import {
     renderDiscardRiver, renderOpponentSeat, renderMyExposures, renderClaimPrompt,
     renderCharlestonStep, setupMenuOverlay, setupGuideOverlay, setupCardOverlay,
     getTileChar, renderCoPilotSuggestions, clearCoPilotGuidance, resetCoPilotTarget,
+    hasPinnedCoPilotTarget,
     renderRoundResult, showCardPattern
-} from './ui.js?v=19';
+} from './ui.js?v=20';
 import {
     createRoom, joinRoom, subscribeToRoom, updateRoom, mutateRoom, leaveRoom, initFirebase
 } from './firebase.js?v=10';
@@ -55,9 +56,55 @@ async function initApp() {
     setupCardOverlay();
     setupMenuOverlay(restartLocalGame, exitToMainLobby);
 
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js').catch(error => console.warn('Service worker unavailable:', error));
-    }
+    setupServiceWorkerUpdates();
+}
+
+function setupServiceWorkerUpdates() {
+    if (!('serviceWorker' in navigator)) return;
+    const versionStorageKey = 'mahjong-sw-version';
+    const hadController = Boolean(navigator.serviceWorker.controller);
+    let updateBannerDismissed = false;
+    const showUpdateBanner = () => {
+        if (!updateBannerDismissed) elements.updateBanner.classList.remove('hidden');
+    };
+
+    elements.btnRefreshApp.addEventListener('click', () => window.location.reload());
+    elements.btnDismissUpdate.addEventListener('click', () => {
+        updateBannerDismissed = true;
+        elements.updateBanner.classList.add('hidden');
+    });
+
+    navigator.serviceWorker.register('./sw.js').then(registration => {
+        if (registration.waiting && hadController) showUpdateBanner();
+        registration.addEventListener('updatefound', () => {
+            const installingWorker = registration.installing;
+            installingWorker?.addEventListener('statechange', () => {
+                if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    showUpdateBanner();
+                }
+            });
+        });
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') registration.update().catch(() => {});
+        });
+        registration.active?.postMessage({ type: 'CHECK_APP_VERSION' });
+    }).catch(error => console.warn('Service worker unavailable:', error));
+
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (hadController) showUpdateBanner();
+    });
+    navigator.serviceWorker.addEventListener('message', event => {
+        const { type, version } = event.data || {};
+        if (type === 'APP_UPDATE_READY') {
+            if (version) localStorage.setItem(versionStorageKey, version);
+            showUpdateBanner();
+        }
+        if (type === 'APP_VERSION' && version) {
+            const previousVersion = localStorage.getItem(versionStorageKey);
+            localStorage.setItem(versionStorageKey, version);
+            if (previousVersion && previousVersion !== version) showUpdateBanner();
+        }
+    });
 }
 
 function assertRequiredElements() {
@@ -218,8 +265,10 @@ function winnerAnnouncement(name) {
 function updateRackUI() {
     renderPlayerRack(myHand(), appState.selectedTileId, handleTileSelect, handleTileDoubleClick);
     renderMyExposures(myExposures(), jokerExchangeOptions(appState.playerIndex));
-    if (!elements.coPilotPanel.classList.contains('hidden')) {
+    const coPilotIsOpen = !elements.coPilotPanel.classList.contains('hidden');
+    if (coPilotIsOpen || hasPinnedCoPilotTarget()) {
         renderCoPilotSuggestions(myHand(), myExposures(), visibleDeadTiles());
+        if (!coPilotIsOpen && !hasPinnedCoPilotTarget()) clearCoPilotGuidance();
     }
 }
 
@@ -313,7 +362,7 @@ async function handleJokerExchange(targetSeat, meldIndex, jokerTileId) {
 function toggleCoPilot() {
     const hidden = elements.coPilotPanel.classList.toggle('hidden');
     elements.btnToggleCopilot.classList.toggle('active', !hidden);
-    if (hidden) clearCoPilotGuidance();
+    if (hidden && !hasPinnedCoPilotTarget()) clearCoPilotGuidance();
     else renderCoPilotSuggestions(myHand(), myExposures(), visibleDeadTiles());
 }
 

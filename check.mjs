@@ -308,7 +308,10 @@ try {
     assert(html.includes('co-pilot-color-key') && css.includes('--pattern-suit-a'), 'Co-pilot and card reference must include the relative-suit color key');
     assert(html.includes('co-pilot-guidance-key') && css.includes('.tile.copilot-keep') && css.includes('.tile.copilot-discard'), 'Co-pilot must explain and render keep/discard rack guidance');
     assert(app.includes('visibleDeadTiles()') && ui.includes('Pinned Path'), 'Co-pilot must use visible dead tiles and keep pinned paths stable');
+    assert(app.includes('hidden && !hasPinnedCoPilotTarget()') && app.includes('coPilotIsOpen || hasPinnedCoPilotTarget()'), 'Pinned co-pilot guidance must remain active while its panel is closed');
     assert(css.includes('.discard-river {\n    position: absolute;') && css.includes('.table-center {') && css.includes('overscroll-behavior: contain'), 'Discard river must scroll without contributing to mobile board height');
+    assert(css.includes('max-width: 72px') && !css.includes('width: min(48vw, 220px)'), 'Mobile opponent meld trays must stay out of the discard river');
+    assert(html.includes('id="update-banner"') && app.includes("registration.addEventListener('updatefound'") && app.includes('APP_UPDATE_READY') && app.includes('CHECK_APP_VERSION'), 'Installed service-worker updates must offer an in-app refresh banner');
     assert(ui.includes("W: 'White Dragon (Soap)'") && ui.includes('tile-caption">SOAP'), 'White Dragon must render and read as Soap');
     assert(css.includes('body.charleston-active .game-header') && css.includes('.tile-exposed.joker-exchange'), 'Charleston header access and highlighted Joker exchanges must remain styled');
     assert(css.includes('body.charleston-active .seat-bottom > * { pointer-events: auto; }'), 'Charleston controls must remain tappable while the co-pilot is open');
