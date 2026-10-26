@@ -1,6 +1,6 @@
 # AGENTS.md — American Mahjong PWA
 
-> ⚙️ **Self-maintenance rule — do this automatically, every time.** If a change you make alters this repo's **shape** (files, entry points, structure), its **stack/dependencies**, the **build/test loop**, or a **guardrail**, you MUST update the matching section of THIS file in the *same commit* — before the task counts as done. This is not optional cleanup or a follow-up task.
+> **Self-maintenance rule.** If a change alters this repo's shape, stack, verification loop, or guardrails, update this file as part of the same change. This rule does not authorize creating a commit.
 
 A mobile-first American Mahjong scoring/practice game (NMJL-style hands, Charleston, solo bots, and family multiplayer via Firebase/localStorage). Keep changes conservative and preserve the existing structure.
 
@@ -104,7 +104,8 @@ If you add a `package.json` for any reason, wire `node check.mjs` up as
   `git push` or `firebase deploy` without an explicit, literal instruction
   ("push to main" or "deploy this"). Approval of the work ("looks good",
   "ship it") is not release permission. When no release was explicitly
-  requested, commit locally, report the commit SHA(s), and stop.
+  requested, leave the verified changes in the working tree. Do not create a
+  commit unless the user explicitly asks for one.
 - **Surgical changes only.** Keep edits focused on the request. No unrelated
   refactoring, reformatting, or renaming across `js/engine.js`/`js/ui.js`/
   `js/app.js`.
