@@ -1,0 +1,65 @@
+{
+  "schema": 1,
+  "app": "mahjong",
+  "assets": [
+    {
+      "source": "icon-192.png",
+      "path": "icon-192.png"
+    },
+    {
+      "source": "icon-512.png",
+      "path": "icon-512.png"
+    },
+    {
+      "source": "index.html",
+      "path": "index.html"
+    },
+    {
+      "source": "js/app.js",
+      "path": "js/app.js"
+    },
+    {
+      "source": "js/bot.js",
+      "path": "js/bot.js"
+    },
+    {
+      "source": "js/engine.js",
+      "path": "js/engine.js"
+    },
+    {
+      "source": "js/firebase.js",
+      "path": "js/firebase.js"
+    },
+    {
+      "source": "js/practice-card.js",
+      "path": "js/practice-card.js"
+    },
+    {
+      "source": "js/ui.js",
+      "path": "js/ui.js"
+    },
+    {
+      "source": "manifest.json",
+      "path": "manifest.json"
+    },
+    {
+      "source": "style.css",
+      "path": "style.css"
+    },
+    {
+      "source": "sw.js",
+      "path": "sw.js"
+    }
+  ],
+  "checks": [
+    [
+      "node",
+      "check.mjs"
+    ],
+    [
+      "node",
+      "--test",
+      "scripts/hosting-release.test.mjs"
+    ]
+  ]
+}
