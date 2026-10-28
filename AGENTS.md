@@ -4,6 +4,22 @@
 
 A mobile-first American Mahjong scoring/practice game (NMJL-style hands, Charleston, solo bots, and family multiplayer via Firebase/localStorage). Keep changes conservative and preserve the existing structure.
 
+
+## Shared workspace workflow
+
+Within Nicholas's personal workspace or its linked checkouts, also read
+`/Users/nicholaslincoln/dev/dev-hq/WORKFLOW.md`. Its verification/evidence,
+release-identity, atomic task-link, handoff/triage and recovery rules apply.
+Root AGENTS.md supplies standing authority; this app's specific safety deltas,
+paused scopes and scheduled-worker restrictions remain binding. The root
+senior-dev review-branch exception does not grant commits/main/merge/deploy,
+new resources, live-data/device operations or wider scheduled-worker powers.
+Generic push prohibitions below concern production/main; explicit narrower
+local/retired/pilot restrictions retain their own scope. Existing owner authority
+continues within its bounds; do not ask for the same approval again.
+Outside this workspace, retain the repository contract and restrictions rather
+than inventing shared services. A structural check is not app-health acceptance.
+
 ## Stack (authoritative)
 
 Vanilla static HTML/CSS/ES modules served by Firebase Hosting. No build step,
@@ -100,8 +116,8 @@ If you add a `package.json` for any reason, wire `node check.mjs` up as
 ## Guardrails
 
 - **Human owns production releases.** A push to `main` auto-triggers the live
-  Firebase Hosting workflow, so a push IS a production release. Never run
-  `git push` or `firebase deploy` without an explicit, literal instruction
+  Firebase Hosting workflow, so a push IS a production release. Never push `main` or run
+  `firebase deploy` without an explicit, literal instruction
   ("push to main" or "deploy this"). Approval of the work ("looks good",
   "ship it") is not release permission. When no release was explicitly
   requested, leave the verified changes in the working tree. Do not create a
@@ -148,3 +164,12 @@ If you add a `package.json` for any reason, wire `node check.mjs` up as
 Update this AGENTS.md in the SAME commit whenever you change the project's
 shape, stack, build/test commands, or a guardrail. A stale AGENTS.md is worse
 than none — it makes the agents confidently wrong.
+
+## Portable process gate and release identity
+
+Read [the project engineering process](docs/workspace-process.md).
+`node scripts/hosting-release.mjs gate` runs this app’s declared checks plus
+source/artifact regression controls. `candidate` stages only committed reviewed
+assets after that gate; `check` and `verify-url` prove intended artifact/served
+bytes. Existing app/manual/emulator/device and private-data guards above remain
+binding. Release preparation is tooling, not a frontend framework or new backend.
