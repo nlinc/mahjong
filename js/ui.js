@@ -190,20 +190,25 @@ export function showToast(message) {
 }
 
 // Render Player Rack
-export function renderPlayerRack(hand, selectedId, onTileSelect, onTileDblClick) {
-    elements.playerTileRack.innerHTML = '';
+export function renderPlayerRack(hand, selectedIds, onTileSelect, onTileDblClick) {
+    const rack = elements.playerTileRack;
+    const focusedTile = document.activeElement;
+    const focusedId = rack.contains(focusedTile) ? focusedTile.dataset.id : undefined;
+    let focusTarget;
+    rack.innerHTML = '';
     
     hand.forEach(tile => {
         const tileEl = document.createElement('button');
         tileEl.type = 'button';
         tileEl.className = 'tile';
-        if (tile.id === selectedId) {
+        const selected = selectedIds.has(tile.id);
+        if (selected) {
             tileEl.classList.add('selected');
         }
         tileEl.setAttribute('data-id', tile.id);
         setTileFace(tileEl, tile);
         tileEl.setAttribute('aria-label', getTileLabel(tile.suit, tile.val));
-        tileEl.setAttribute('aria-pressed', String(tile.id === selectedId));
+        tileEl.setAttribute('aria-pressed', String(selected));
         
         tileEl.addEventListener('click', () => {
             onTileSelect(tile.id);
@@ -213,8 +218,10 @@ export function renderPlayerRack(hand, selectedId, onTileSelect, onTileDblClick)
             onTileDblClick(tile.id);
         });
         
-        elements.playerTileRack.appendChild(tileEl);
+        rack.appendChild(tileEl);
+        if (tileEl.dataset.id === focusedId) focusTarget = tileEl;
     });
+    focusTarget?.focus({ preventScroll: true });
 }
 
 // Render Discard River

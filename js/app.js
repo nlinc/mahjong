@@ -12,7 +12,7 @@ import {
     getTileChar, renderCoPilotSuggestions, clearCoPilotGuidance, resetCoPilotTarget,
     hasPinnedCoPilotTarget,
     renderRoundResult, showCardPattern
-} from './ui.js?v=20';
+} from './ui.js?v=21';
 import {
     createRoom, joinRoom, subscribeToRoom, updateRoom, mutateRoom, leaveRoom, initFirebase
 } from './firebase.js?v=10';
@@ -263,7 +263,10 @@ function winnerAnnouncement(name) {
 }
 
 function updateRackUI() {
-    renderPlayerRack(myHand(), appState.selectedTileId, handleTileSelect, handleTileDoubleClick);
+    const selectedIds = appState.gamePhase === 'charleston'
+        ? myCharlestonSelections.map(tile => tile.id)
+        : [appState.selectedTileId];
+    renderPlayerRack(myHand(), new Set(selectedIds), handleTileSelect, handleTileDoubleClick);
     renderMyExposures(myExposures(), jokerExchangeOptions(appState.playerIndex));
     const coPilotIsOpen = !elements.coPilotPanel.classList.contains('hidden');
     if (coPilotIsOpen || hasPinnedCoPilotTarget()) {

@@ -109,6 +109,8 @@ any UI change, state in your report which screens/flows you manually traced
 through the code for (e.g. "Charleston pass validation for a 3-tile pass,
 lobby→room-lobby→game-board transition, round-result exit path") — don't
 claim a UI change works without saying what you checked.
+When changing the rack, check that keyboard selection through the Charleston
+keeps focus on the same surviving tile and reports each tile's selected state.
 
 If you add a `package.json` for any reason, wire `node check.mjs` up as
 `npm test` but do not turn this into an `npm install`-then-build workflow.
