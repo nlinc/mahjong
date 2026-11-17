@@ -40,6 +40,7 @@ export const elements = {
     
     // Labels & Lists
     lobbyRoomCode: document.getElementById('lobby-room-code'),
+    roomShareMessage: document.getElementById('room-share-message'),
     lobbyPlayerCount: document.getElementById('lobby-player-count'),
     lobbyPlayersList: document.getElementById('lobby-players-list'),
     lobbyMessage: document.getElementById('lobby-message'),

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>American Mahjong PWA</title>
-    <link rel="stylesheet" href="style.css?v=24">
+    <link rel="stylesheet" href="style.css?v=25">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -78,7 +78,8 @@
                 <div class="room-code-display">
                     <p>Room Code</p>
                     <h1 id="lobby-room-code">-----</h1>
-                    <button type="button" class="copy-hint" id="btn-copy-code">Copy Share Link 🔗</button>
+                    <button type="button" class="copy-hint" id="btn-copy-code" disabled>Copy Share Link 🔗</button>
+                    <p id="room-share-message" class="room-share-message" role="status"></p>
                 </div>
 
                 <div class="players-list-box">
@@ -400,6 +401,6 @@
     </div>
 
     <!-- Scripts -->
-    <script type="module" src="js/app.js?v=23"></script>
+    <script type="module" src="js/app.js?v=24"></script>
 </body>
 </html>

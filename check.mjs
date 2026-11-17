@@ -318,7 +318,8 @@ try {
     assert(ui.includes("tileEl.setAttribute('title', getTileLabel(tile.suit, tile.val))"), 'Discarded tiles must expose readable tile names');
     assert(ui.includes("winnerName === 'You' ? 'You Win!'") && !ui.includes("`${result.winnerName || 'Player'} Wins!`"), 'Round result must use second-person winner grammar');
     assert(app.includes("elements.roundResultOverlay.classList.add('hidden')") && app.indexOf("switchScreen(elements.lobbyScreen)") < app.lastIndexOf('await leaveRoom'), 'Exit to Lobby must hide the result and switch screens before remote cleanup');
-    assert(html.includes('<button type="button" class="copy-hint" id="btn-copy-code">'), 'Copy Share Link must be a keyboard-accessible button');
+    assert(html.includes('<button type="button" class="copy-hint" id="btn-copy-code" disabled>'), 'Copy Share Link must wait for the room and then be keyboard-accessible');
+    assert(html.includes('id="room-share-message" class="room-share-message" role="status"'), 'The room lobby announces clipboard feedback');
     assert(html.includes('<label for="num-blind-count">Tiles to pass blindly:</label>'), 'Blind-pass count must have a programmatic label');
     assert(html.includes('aria-label="Close practice card"') && html.includes('aria-label="Close how-to guide"'), 'Icon-only close buttons must have descriptive labels');
     assert(css.includes('.btn:disabled'), 'Disabled buttons must have a visible disabled state');

@@ -12,7 +12,7 @@ import {
     getTileChar, renderCoPilotSuggestions, clearCoPilotGuidance, resetCoPilotTarget,
     hasPinnedCoPilotTarget,
     renderRoundResult, showCardPattern
-} from './ui.js?v=21';
+} from './ui.js?v=22';
 import {
     createRoom, joinRoom, subscribeToRoom, updateRoom, mutateRoom, leaveRoom, initFirebase
 } from './firebase.js?v=10';
@@ -46,10 +46,10 @@ let charlestonPassPending = false;
 let botTimer = null;
 let drawingRoomTile = false;
 
+const firebaseReady = initFirebase();
 initApp();
 
-async function initApp() {
-    await initFirebase();
+function initApp() {
     assertRequiredElements();
     setupUIEvents();
     setupGuideOverlay();
@@ -848,20 +848,49 @@ function performBotTurn(state, seat, players) {
 }
 
 /* Multiplayer lobby and room synchronization */
+let shareRequest = 0;
+
+function renderRoomShare(roomCode, message = '') {
+    shareRequest++;
+    elements.lobbyRoomCode.textContent = roomCode || '-----';
+    elements.btnCopyCode.disabled = !roomCode;
+    elements.roomShareMessage.textContent = message;
+}
+
+async function subscribeToCurrentRoom(roomCode) {
+    const unsubscribe = await subscribeToRoom(roomCode, room => {
+        if (appState.roomId === roomCode) handleRoomStateUpdate(room);
+    });
+    if (appState.roomId === roomCode) appState.unsubscribe = unsubscribe;
+    else unsubscribe();
+}
+
 async function handleCreateRoom() {
     const roomCode = generateRoomCode();
     appState.mode = 'multi';
     appState.playerName = 'Host';
     appState.roomId = roomCode;
     appState.playerIndex = 0;
+    appState.players = [];
+    renderRoomShare(null, 'Creating room…');
+    renderLobby({ players: [] });
     switchScreen(elements.roomLobbyScreen);
-    elements.lobbyRoomCode.textContent = roomCode;
     elements.btnCreateRoom.disabled = true;
     try {
+        await firebaseReady;
+        if (appState.roomId !== roomCode) return;
         const room = await createRoom(roomCode, appState.playerName);
+        if (appState.roomId !== roomCode) {
+            await leaveRoom(roomCode, 0).catch(() => {});
+            return;
+        }
+        renderRoomShare(roomCode);
         handleRoomStateUpdate(room);
-        appState.unsubscribe = await subscribeToRoom(roomCode, handleRoomStateUpdate);
+        await subscribeToCurrentRoom(roomCode);
     } catch (error) {
+        if (appState.roomId !== roomCode) return;
+        appState.roomId = null;
+        renderRoomShare(null);
         switchScreen(elements.lobbyScreen);
         showLobbyMessage(error.message || 'Could not create room.', 'error');
     } finally {
@@ -881,12 +910,13 @@ async function handleJoinRoom() {
     elements.btnJoinRoom.textContent = 'Joining…';
     showLobbyMessage(`Looking for room ${roomCode}…`);
     try {
+        await firebaseReady;
         const room = await joinRoom(roomCode, appState.playerName);
         appState.playerIndex = room.players.length - 1;
+        renderRoomShare(roomCode);
         switchScreen(elements.roomLobbyScreen);
-        elements.lobbyRoomCode.textContent = roomCode;
         handleRoomStateUpdate(room);
-        appState.unsubscribe = await subscribeToRoom(roomCode, handleRoomStateUpdate);
+        await subscribeToCurrentRoom(roomCode);
     } catch (error) {
         showLobbyMessage(error.message || 'Could not join room. Check the code and try again.', 'error');
     } finally {
@@ -931,6 +961,7 @@ function handleRoomStateUpdate(room) {
         gamePhase: room.status === 'ended' ? 'gameover' : room.status
     });
     if (appState.gamePhase !== 'charleston' || appState.charlestonStep !== previousCharlestonStep) myCharlestonSelections = [];
+    if (elements.roomLobbyScreen.classList.contains('active')) renderRoomShare(null);
     switchScreen(elements.gameScreen);
     renderGame();
     if (room.status === 'ended' && state.winnerMessage) showToast(state.winnerMessage);
@@ -995,6 +1026,7 @@ async function handleLeaveLobby() {
     const playerIndex = appState.playerIndex;
     appState.roomId = null;
     appState.players = [];
+    renderRoomShare(null);
     elements.roundResultOverlay.classList.add('hidden');
     elements.menuOverlay.classList.add('hidden');
     closeMultiplayerPanel();
@@ -1024,11 +1056,18 @@ function exitToMainLobby() {
 }
 
 async function copyRoomLink() {
-    const link = `${location.origin}${location.pathname}?room=${appState.roomId}`;
+    const roomCode = appState.roomId;
+    if (!roomCode || elements.btnCopyCode.disabled || !elements.roomLobbyScreen.classList.contains('active')) return;
+    const request = ++shareRequest;
+    const link = `${location.origin}${location.pathname}?room=${roomCode}`;
+    let message;
     try {
         await navigator.clipboard.writeText(link);
-        showToast('Share link copied.');
+        message = 'Link copied.';
     } catch {
-        showToast(`Room code: ${appState.roomId}`);
+        message = `Couldn’t copy the link. Share room code ${roomCode} instead.`;
+    }
+    if (request === shareRequest && roomCode === appState.roomId && elements.roomLobbyScreen.classList.contains('active')) {
+        elements.roomShareMessage.textContent = message;
     }
 }
